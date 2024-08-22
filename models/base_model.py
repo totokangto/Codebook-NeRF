@@ -54,6 +54,9 @@ class BaseModel(ABC, Configurable):
 
         self.optimizers = []
 
+        # Track best validation loss
+        self.best_val_loss = float("inf")
+
     @abstractmethod
     def set_input(self, input):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
@@ -194,6 +197,22 @@ class BaseModel(ABC, Configurable):
                     net = net.module
                 torch.save(net.cpu().state_dict(), save_path)
                 net.to(self.device)
+
+    def save_best_networks(self, val_loss):
+        """Save the best network based on validation loss."""
+        if val_loss < self.best_val_loss:
+            print(f"Validation loss improved from {self.best_val_loss} to {val_loss}. Saving best model...")
+            self.best_val_loss = val_loss
+            for name in self.model_names:
+                if isinstance(name, str):
+                    save_filename = 'best_net_%s.pth' % name
+                    save_path = os.path.join(self.save_dir, save_filename)
+                    net = getattr(self, 'net' + name)
+
+                    if isinstance(net, torch.nn.DataParallel) or isinstance(net, torch.nn.parallel.distributed.DistributedDataParallel):
+                        net = net.module
+                    torch.save(net.cpu().state_dict(), save_path)
+                    net.to(self.device)
 
     def load_networks(self, exp_name, epoch, keys=None):
         """Load all the networks from the disk.
