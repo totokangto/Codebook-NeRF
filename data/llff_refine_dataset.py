@@ -244,7 +244,7 @@ class LLFFRefineDataset(BaseDataset):
                 # ref_patches.append(torch.zeros_like(gt_patch)) 
                 
                 # patch: same area on sr image
-                ref_patches.append(self.gt_pspc_imgs[img_idx][:, y_start: y_start+self.opt.patch_len, x_start: x_start+self.opt.patch_len])
+                ref_patches.append(gt_patch)
             self.sr_gt_ref_patches = Visualizee('image', torch.cat([sr_patch, gt_patch, ref_patches[0]], dim=2), timestamp=True, name='sr_gt_ref_patches', data_format='CHW', range=(-1, 1), img_format='png')
 
             if self.opt.with_gt_patch:
@@ -264,7 +264,14 @@ class LLFFRefineDataset(BaseDataset):
             ref_hh = min(self.img_wh[1] - self.opt.patch_len, y_start + self.opt.patch_len)
             for _ in range(self.opt.num_ref_patches):
                 ref_x_start, ref_y_start = self.get_start_pos(ref_wl, ref_hl, ref_wh, ref_hh)
-                ref_patches.append(self.ref_img[:, ref_y_start: ref_y_start+self.opt.patch_len, ref_x_start: ref_x_start+self.opt.patch_len])
+                # patch: original
+                # ref_patches.append(self.ref_img[:, ref_y_start: ref_y_start+self.opt.patch_len, ref_x_start: ref_x_start+self.opt.patch_len])
+                
+                # patch: zero data
+                # ref_patches.append(torch.zeros_like(gt_patch)) 
+                
+                # patch: same area on sr image
+                ref_patches.append(gt_patch)
             ref_patches = torch.stack(ref_patches, 0)
             # import time
             # T.ToPILImage()((torch.cat([sr_patch, gt_patch], dim=2)+1.0)/2.0).save(f'./test/{idx}-{time.time()}-gt-refine.png')
