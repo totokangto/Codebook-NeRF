@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-#SBATCH -J Nerfsr-Train-llff-downX-refine-patchsamearea8-enhancernetwork
+#SBATCH -J Nerfsr-Train-llff-downX-refine-patchsamearea1_enhancer
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-gpu=8
 #SBATCH --mem-per-gpu=32G
