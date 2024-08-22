@@ -113,11 +113,13 @@ def main(rank):
             model.eval()
             with torch.no_grad():
                 model.validate(dataset_val)
-            val_losses = model.get_current_losses('val')
+            val_losses = model.get_current_losses('val_iter')
             for loss_name, loss_val in val_losses.items():
                 writer.add_scalars(f"{loss_name}", {'val_full': loss_val}, global_step=total_iters)
             save_visuals(os.path.join(model.save_dir, f"{epoch}_val_vis"), model.get_current_visuals('val'))
             print("Validation losses |", ' '.join([f"{k}: {v:.3e}" for k, v in val_losses.items()]))
+
+            model.save_best_networks(val_losses['psnr_refine'])
     
         if opt.is_master:
             print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.n_epochs, time.time() - epoch_start_time))
