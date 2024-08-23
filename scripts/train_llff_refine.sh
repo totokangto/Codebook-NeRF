@@ -4,7 +4,7 @@ H=378
 accelerator="dp"
 downscale=2
 batch_size=32
-option="patchsamearea1_codebook"
+option="patchsamearea1_codebook_inferenceloss"
 # option="patchsamearea1_featurelearning1by1"
 
 data_root='/data/csj000714/data'

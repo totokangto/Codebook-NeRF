@@ -43,6 +43,7 @@ class RefineModel(BaseModel):
         parser.add_argument('--code_size', type=int, default=256)
         parser.add_argument('--num_codes', type=int, default=512)
         parser.add_argument('--commitment_cost', type=float, default=0.25)
+        parser.add_argument('--inference', action='store_true')
 
         parser.add_argument('--network_enhancer', action='store_true')
         parser.add_argument('--network_codebook', action='store_true')
@@ -118,34 +119,50 @@ class RefineModel(BaseModel):
         # num_ref_patches가 8일 때 그 중 하나의 패치만 선택
         selected_patch_idx = 0  # 0부터 7까지 선택 가능, 여기서는 첫 번째 패치를 선택
         self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
-        
+
         # enhanced: Enhancer Network로 data_ref_patches를 사용해 data_sr_patch 보강
         if self.opt.network_enhancer:
             enhanced_sr_patch = self.netEnhancer(self.data_sr_patch)
 
         # VQ-VAE Codebook을 이용하여 data_ref_patches를 생성 또는 보강
         if self.opt.network_codebook:
-            # enhanced_sr_patch = self.codebook(data_ref_patches)
-            enhanced_sr_patch, codebook_loss, commitment_loss, _ = self.codebook(self.data_ref_patch)
-        
+            # for train : HR => codebook => HR 
+            codebook_hr_patch, codebook_loss_hr, commitment_loss_hr, _ = self.codebook(self.data_ref_patch)
+            # for inference : SR => codebook => HR 
+            """
+            # 32,3,64,64 => 32,8,3,64,64 : sr 패치 8개 복사
+            eight_sr_patches = torch.unsqueeze(self.data_sr_patch,dim=1)
+            eight_sr_patches = eight_sr_patches.repeat(1,8,1,1,1)
+            eight_sr_patches = eight_sr_patches.view(eight_sr_patches.shape[0], -1, eight_sr_patches.shape[-2], eight_sr_patches.shape[-1])
+            codebook_test_patch, codebook_loss_lr, commitment_loss_lr, _ = self.codebook(eight_sr_patches)
+            """
+            codebook_test_patch, codebook_loss_lr, commitment_loss_lr, _ = self.codebook(self.data_sr_patch)
         if self.opt.refine_network == 'unetgenerator':
             # original
             input = torch.cat((self.data_sr_patch, self.data_ref_patches), dim=1)
+
             # enhanced
             if self.opt.network_enhancer:
                 input = torch.cat((enhanced_sr_patch, self.data_ref_patch), dim=1)
+
             # codebook
             if self.opt.network_codebook:
-                input = torch.cat((self.data_sr_patch, enhanced_sr_patch), dim=1)
+                if self.opt.inference: # test 
+                    # print(f"codebook_test_patch shape : {codebook_test_patch.shape}") 12,24,64,64
+                    input = torch.cat((self.data_sr_patch, codebook_test_patch), dim=1)
+                else: # train 
+                    input = torch.cat((self.data_sr_patch, codebook_hr_patch), dim=1)
             self.pred = self.netRefine(input)
         else:
-            self.pred = self.netRefine(self.data_sr_patch, enhanced_sr_patch)
+            self.pred = self.netRefine(self.data_sr_patch, codebook_hr_patch)
         self.sr_gt_refine = Visualizee('image', torch.cat([self.data_sr_patch[0], self.data_gt_patch[0], self.pred[0].detach()], dim=2), timestamp=True, name='sr_gt_refine', data_format='CHW', range=(-1, 1), img_format='png')
 
         # Save losses for later uses
         if self.opt.network_codebook:
-            self.codebook_loss = codebook_loss
-            self.commitment_loss = commitment_loss
+            self.codebook_loss_hr = codebook_loss_hr 
+            self.commitment_loss_hr = commitment_loss_hr
+            self.codebook_loss_lr = codebook_loss_lr
+            self.commitment_loss_lr = commitment_loss_lr
 
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
@@ -209,8 +226,9 @@ class RefineModel(BaseModel):
         self.loss_tot = self.loss_vgg + self.loss_mse + self.loss_l1   
         
         if self.opt.network_codebook:
-            self.loss_tot += self.codebook_loss + self.opt.commitment_cost * self.commitment_loss
-        
+            self.loss_tot += self.codebook_loss_hr + self.opt.commitment_cost * self.commitment_loss_hr
+            self.loss_tot += self.codebook_loss_lr + self.opt.commitment_cost * self.commitment_loss_lr
+            
         if self.opt.refine_with_grad:
             self.loss_grad = self.losses['grad'](self.pred, self.data_gt_patch) * self.opt.lambda_refine_grad
             self.loss_tot += self.loss_grad
