@@ -87,6 +87,8 @@ class RefineModel(BaseModel):
             'ssim': SSIM(data_range=(-1,1))
         }
         self.train_visual_names = ['sr_gt_refine', 'ref_patches']
+        if self.opt.network_codebook:
+            self.train_visual_names.append('sr_gt_refine_codebook')
         if self.opt.refine_as_gan:
             self.train_loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
         else:
@@ -155,7 +157,12 @@ class RefineModel(BaseModel):
             self.pred = self.netRefine(input)
         else:
             self.pred = self.netRefine(self.data_sr_patch, codebook_hr_patch)
+
         self.sr_gt_refine = Visualizee('image', torch.cat([self.data_sr_patch[0], self.data_gt_patch[0], self.pred[0].detach()], dim=2), timestamp=True, name='sr_gt_refine', data_format='CHW', range=(-1, 1), img_format='png')
+        if self.opt.network_codebook:
+            codebook_hr_patch_cpu = codebook_hr_patch[0].detach().cpu().numpy()
+            codebook_hr_patch_cpu = torch.tensor(codebook_hr_patch_cpu).to(self.device)
+            self.sr_gt_refine_codebook = Visualizee('image', torch.cat([self.data_sr_patch[0], self.data_gt_patch[0], self.pred[0].detach(), codebook_hr_patch_cpu], dim=2), timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
 
         # Save losses for later uses
         if self.opt.network_codebook:
