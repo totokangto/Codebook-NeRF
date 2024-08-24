@@ -73,7 +73,7 @@ def main(rank):
                 t_data = iter_start_time - iter_data_time
 
             model.set_input(data)         # unpack data from dataset and apply preprocessing
-            model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
+            model.optimize_parameters(i)   # calculate loss functions, get gradients, update network weights
 
             if opt.is_master and total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk
                 losses = model.get_current_losses('train')
