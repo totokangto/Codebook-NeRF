@@ -4,7 +4,7 @@ H=378
 # batch_size=32
 downscale=2
 batch_size=1
-option="patchsamearea8"
+option="patchsamearea1_codebook"
 
 data_root='/data/csj000714/data'
 
@@ -14,6 +14,6 @@ python test_refine.py --name llff-refine-${dataset}-${H}x${W}-ni-dp-ds${downscal
     --img_wh $W $H --batch_size $batch_size \
     --model refine --test_split test_train --load_epoch 3 \
     --syn_dataroot ./checkpoints/nerf-sr/llff-${dataset}-${H}x${W}-ni64-dp-ds${downscale}/30_test_vis \
-    # --network_codebook --inference
+    --network_codebook --inference
 
     # --test_split test --refine_network maxpoolingmodel --load_epoch 3 \

@@ -130,9 +130,9 @@ class RefineModel(BaseModel):
         # VQ-VAE Codebook을 이용하여 data_ref_patches를 생성 또는 보강
         if self.opt.network_codebook:
             # for train : HR => codebook => HR 
-            codebook_hr_patch, codebook_loss_hr, commitment_loss_hr, _ = self.codebook(self.data_ref_patch, idx)
+            codebook_hr_patch, recon_loss_hr, codebook_loss_hr, commitment_loss_hr, _ = self.codebook(self.data_ref_patch, idx)
             # for inference : SR => codebook => HR 
-            codebook_test_patch, codebook_loss_lr, commitment_loss_lr, _ = self.codebook(self.data_sr_patch)
+            codebook_test_patch, recon_loss_lr, codebook_loss_lr, commitment_loss_lr, _ = self.codebook(self.data_sr_patch)
         if self.opt.refine_network == 'unetgenerator':
             # original
             input = torch.cat((self.data_sr_patch, self.data_ref_patches), dim=1)
@@ -160,8 +160,10 @@ class RefineModel(BaseModel):
 
         # Save losses for later uses
         if self.opt.network_codebook:
+            self.recon_loss_hr = recon_loss_hr
             self.codebook_loss_hr = codebook_loss_hr 
             self.commitment_loss_hr = commitment_loss_hr
+            self.recon_loss_lr = recon_loss_lr
             self.codebook_loss_lr = codebook_loss_lr
             self.commitment_loss_lr = commitment_loss_lr
 
@@ -227,8 +229,8 @@ class RefineModel(BaseModel):
         self.loss_tot = self.loss_vgg + self.loss_mse + self.loss_l1   
         
         if self.opt.network_codebook:
-            self.loss_tot += self.codebook_loss_hr + self.opt.commitment_cost * self.commitment_loss_hr
-            self.loss_tot += self.codebook_loss_lr + self.opt.commitment_cost * self.commitment_loss_lr
+            self.loss_tot += self.recon_loss_hr + self.codebook_loss_hr + self.opt.commitment_cost * self.commitment_loss_hr
+            self.loss_tot += self.recon_loss_lr + self.codebook_loss_lr + self.opt.commitment_cost * self.commitment_loss_lr
             
         if self.opt.refine_with_grad:
             self.loss_grad = self.losses['grad'](self.pred, self.data_gt_patch) * self.opt.lambda_refine_grad

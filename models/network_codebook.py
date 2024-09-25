@@ -24,6 +24,7 @@ class VQCodebook(nn.Module):
         # self.embedding.weight.data.uniform_(-1 / num_embeddings, 1 / num_embeddings)
         self.embedding.weight.requires_grad = False  # 임베딩 업데이트 비활성화
 
+        # self.encoder = Encoder(3,128,2,32)
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
@@ -59,7 +60,9 @@ class VQCodebook(nn.Module):
         print(f"codebook_loss: {codebook_loss}, commitment_loss: {commitment_loss}")
 
         reconstructed_patch = self.decode_vector(z_q)
-        return reconstructed_patch, codebook_loss, commitment_loss, encoding_indices
+        reconstruction_loss = torch.mean((reconstructed_patch - patch) ** 2)  # Reconstruction loss
+
+        return reconstructed_patch, reconstruction_loss, codebook_loss, commitment_loss, encoding_indices
 
     def encode_patch(self, patch):
         feature = self.encoder(patch)  # [batch_size, embedding_dim, 1, 1]
