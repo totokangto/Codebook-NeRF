@@ -2,12 +2,16 @@ import math
 from options import Configurable, str2bool
 import torch
 import torch.nn as nn
-import torch.nn.functional as TF
+import torch.nn.functional as F
 from torch.nn import init
 from torch.optim import lr_scheduler
 from torch.nn.parallel.distributed import DistributedDataParallel
 from .embedding import BaseEmbedding
 from utils.utils import find_class_using_name
+
+from models.residual import ResidualStack
+from models.encoder import Encoder
+from models.decoder import Decoder
 
 
 def init_weights(net, init_type='normal', init_gain=0.02):
@@ -99,6 +103,7 @@ def get_scheduler(optimizer, opt, last_epoch=-1):
     For other schedulers (step, plateau, and cosine), we use the default PyTorch schedulers.
     See https://pytorch.org/docs/stable/optim.html for more details.
     """
+ 
     if opt.lr_policy == 'linear':
         def lambda_rule(epoch):
             t = max(0, epoch + 1 - opt.n_epochs + opt.n_epochs_decay) / float(opt.n_epochs_decay + 1)
@@ -110,7 +115,8 @@ def get_scheduler(optimizer, opt, last_epoch=-1):
             t = max(0, epoch + 1 - opt.n_epochs + opt.n_epochs_decay) / float(opt.n_epochs_decay + 1)
             lr = math.exp(math.log(opt.lr) * (1 - t) + math.log(opt.lr_final) * t)
             return lr / opt.lr
-        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule, last_epoch=last_epoch)
+        scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
+        scheduler.last_epoch = last_epoch
     elif opt.lr_policy == 'step':
         scheduler = lr_scheduler.StepLR(optimizer, step_size=opt.lr_decay_epochs, gamma=opt.lr_decay_gamma, last_epoch=last_epoch)
     else:
@@ -342,7 +348,7 @@ def get_norm_layer(norm_type='instance'):
     else:
         raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
     return norm_layer
-
+'''
 class UnetGenerator(nn.Module, Configurable):
     """Create a Unet-based generator"""
     @staticmethod
@@ -359,8 +365,8 @@ class UnetGenerator(nn.Module, Configurable):
         super(UnetGenerator, self).__init__()
 
         self.opt = opt
-        output_nc = opt.output_nc
-        input_nc = opt.input_nc
+        output_nc = opt.output_nc # 3
+        input_nc = opt.input_nc # 6
         ngf = opt.ngf
         norm_layer = get_norm_layer(self.opt.norm)
 
@@ -441,6 +447,172 @@ class UnetSkipConnectionBlock(nn.Module):
             return self.model(x)
         else:   # add skip connections
             return torch.cat([x, self.model(x)], 1)
+'''
+
+
+class UnetGenerator(nn.Module, Configurable):
+    @staticmethod
+    def modify_commandline_options(parser):
+        parser.add_argument('--in_dim', type=int, default=3)
+        parser.add_argument('--h_dim', type=int, default=128)
+        parser.add_argument('--n_res_layers', type=int, default=2)
+        parser.add_argument('--res_h_dim', type=int, default=32)
+        parser.add_argument('--embedding_dim', type=int, default=64) # default : 64
+        parser.add_argument('--num_embeddings', type=int, default=512)
+        return parser
+
+    def __init__(self, opt):
+        """Construct a Unet generator"""
+        super(UnetGenerator, self).__init__()
+
+        self.opt = opt
+        embedding_dim = opt.embedding_dim
+        in_dim = opt.in_dim
+        h_dim = opt.h_dim
+        n_res_layers = opt.n_res_layers
+        res_h_dim = opt.res_h_dim
+        kernel = 4
+        stride = 2
+
+        self.codebook = VQCodebook(self.opt).to(opt.device)
+
+        self.encoder = Encoder(in_dim,h_dim,n_res_layers,res_h_dim)
+        self.pre_quantization_conv = nn.Conv2d(
+            h_dim, embedding_dim, kernel_size=1, stride=1)
+
+        self.up_1 =nn.Sequential(
+            nn.ConvTranspose2d(
+                embedding_dim, h_dim, kernel_size=1, stride=1),
+                ResidualStack(h_dim, h_dim, res_h_dim, n_res_layers)
+        )
+ 
+        self.up_2 = nn.Sequential(
+            nn.ConvTranspose2d(h_dim*2, h_dim ,
+                               kernel_size=kernel-1, stride=stride-1, padding=1)
+        )
+
+        self.up_3 = nn.Sequential(
+            nn.ReLU(),
+            nn.ConvTranspose2d(h_dim*2, h_dim//2, kernel_size=kernel,
+                               stride=stride, padding=1)
+        )
+
+        self.up_4 = nn.Sequential(
+            nn.ReLU(),
+            nn.ConvTranspose2d(h_dim, 3, kernel_size=kernel,
+                               stride=stride, padding=1)
+        )
+        
+    # loss는 어캐할래
+    def forward(self, sr, ref):
+        z = self.encoder(sr)
+        z = self.pre_quantization_conv(z)
+
+        cb_hr_patch, loss_hr, cb_x1,cb_x2,cb_x3 = self.codebook(self.opt,ref)
+        _, loss_sr, _,_,_ = self.codebook(self.opt,sr)
+
+        x1 = self.up_1(z) # 128,16,16
+        x1 = torch.cat([x1, cb_x1], dim=1) # 256,16,16
+        x2 = self.up_2(x1)
+        x2 = torch.cat([x2, cb_x2], dim=1)
+        x3 = self.up_3(x2)
+        x3 = torch.cat([x3, cb_x3], dim=1)
+        x4 = self.up_4(x3)
+        return x4, cb_hr_patch, loss_hr, loss_sr
+
+class VQCodebook(nn.Module, Configurable):
+    @staticmethod
+    def modify_commandline_options(parser):
+        parser.add_argument('--in_dim', type=int, default=3)
+        parser.add_argument('--h_dim', type=int, default=128)
+        parser.add_argument('--n_res_layers', type=int, default=2)
+        parser.add_argument('--res_h_dim', type=int, default=32)
+        parser.add_argument('--res_h_dim', type=int, default=32)
+        parser.add_argument('--embedding_dim', type=int, default=64) # default : 64
+        parser.add_argument('--num_embeddings', type=int, default=512)
+        return parser
+    
+    
+    def __init__(self, opt):
+        super(VQCodebook, self).__init__()
+        
+        self.opt = opt
+        embedding_dim = opt.embedding_dim
+        num_embeddings = opt.num_embeddings
+        in_dim = opt.in_dim
+        h_dim = opt.h_dim
+        n_res_layers = opt.n_res_layers
+        res_h_dim = opt.res_h_dim
+        
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+
+        self.embedding = nn.Embedding(num_embeddings, embedding_dim)
+
+        self.encoder = Encoder(in_dim,h_dim,n_res_layers,res_h_dim)
+        self.pre_quantization_conv = nn.Conv2d(
+            h_dim, embedding_dim, kernel_size=1, stride=1)
+        self.decoder = Decoder(embedding_dim,h_dim,n_res_layers,res_h_dim)
+
+    def forward(self, opt, patch, idx=None):
+        z = self.encoder(patch) # 32, 128, 16, 16
+        z = self.pre_quantization_conv(z) # 32, 64, 16, 16
+        z = z.permute(0, 2, 3, 1).contiguous() # 32, 16, 16, 64
+        
+        if idx is not None:
+            print(f"Initializing codebook at index {idx}")
+            for i in range(32): # batch_size: 32
+                self.initialize_embedding_with_vector(self.embedding, z[i], idx * 32 + i)
+        
+
+        # Flatten input using reshape instead of view
+        z_flattened = z.reshape(-1, self.embedding_dim) # 8192, 64
+
+        # Calculate distances between z and embedding
+        dists = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + \
+            torch.sum(self.embedding.weight**2, dim=1) - 2 * \
+            torch.matmul(z_flattened, self.embedding.weight.t())
+
+        # Get the closest codebook entry
+        min_encoding_indices = torch.argmin(dists, dim=1).unsqueeze(1)
+        min_encodings = torch.zeros(
+            min_encoding_indices.shape[0], self.num_embeddings).to(opt.device)
+        min_encodings.scatter_(1, min_encoding_indices, 1)
+
+        # Quantize the input using the closest codebook entry
+        z_q = torch.matmul(min_encodings, self.embedding.weight).view(z.shape)
+
+        # Calculate VQ Losses
+        codebook_loss = torch.mean((z_q.detach() - z) ** 2)
+        commitment_loss = torch.mean((z_q - z.detach()) ** 2)
+        loss = codebook_loss + 0.25*commitment_loss
+
+        # preserve gradients
+        z_q = z + (z_q - z).detach()
+        z_q = z_q.permute(0, 3, 1, 2).contiguous() # 32, 64, 16, 16
+        x1,x2,x3,reconstructed_patch = self.decoder(z_q)
+        return reconstructed_patch, loss, x1,x2,x3
+
+    
+    def initialize_embedding_with_vectors(self, embedding_layer, initial_vectors):
+        # Check if the shape matches
+        if embedding_layer.weight.shape != initial_vectors.shape:
+            raise ValueError(f"Shape of initial_vectorss {initial_vectors.shape} does not match "
+                             f"embedding layer weight shape {embedding_layer.weight.shape}")
+
+        # Initialize the embedding weights with the given vectors
+        with torch.no_grad():
+            embedding_layer.weight.copy_(initial_vectors)
+
+    def initialize_embedding_with_vector(self, embedding_layer, vector, index):
+        # Check if the input vector has the correct dimension
+        if vector.shape[0] != embedding_layer.embedding_dim:
+            raise ValueError(f"The input vector should have shape [{embedding_layer.embedding_dim}], "
+                             f"but got shape {vector.shape}")
+
+        # Initialize the specific embedding at the given index
+        with torch.no_grad():
+            embedding_layer.weight[index].copy_(vector)
 
 class ResnetGenerator(nn.Module):
     """Resnet-based generator that consists of Resnet blocks between a few downsampling/upsampling operations.
@@ -939,8 +1111,10 @@ class MaxPoolingModel(nn.Module, Configurable):
         super(MaxPoolingModel, self).__init__()
         self.opt = opt
         self.E = Model_VNPCAT_Encoder()
+        print("==========encoder clear==============")
         if self.opt.not_use_ref:
             self.D = Model_VNPCAT_Decoder_NoPooling()
+            print("==========decoder clear==============")
         else:
             self.D = Model_VNPCAT_Decoder()
         self.apply(self.initialize_weight)
@@ -954,6 +1128,7 @@ class MaxPoolingModel(nn.Module, Configurable):
 
         # reshape from (N, 8, C, H, W) to (N*8, C, H, W)
         candi_shape = list_x_candi.shape
+        print("===================",candi_shape)
         list_x_candi = list_x_candi.view(candi_shape[0]*candi_shape[1], candi_shape[2], candi_shape[3], candi_shape[4])
         list_list_F_candi = self.E(list_x_candi)
         concat_F0 = list_list_F_candi[0].view(candi_shape[0], candi_shape[1], list_list_F_candi[0].shape[-3], list_list_F_candi[0].shape[-2], list_list_F_candi[0].shape[-1])

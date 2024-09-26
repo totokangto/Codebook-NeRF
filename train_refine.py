@@ -52,7 +52,7 @@ def main(rank):
     current_epoch = model.setup(opt)               # regular setup: load and print networks; create schedulers
     total_iters = current_epoch * len(dataset.dataloader)      # the total number of training iterations
     writer = create_writer(opt)
-    for epoch in range(current_epoch + 1, opt.n_epochs + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
+    for epoch in range(current_epoch + 1, current_epoch + opt.n_epochs + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()    # timer for data loading per iteration
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
@@ -73,7 +73,8 @@ def main(rank):
                 t_data = iter_start_time - iter_data_time
 
             model.set_input(data)         # unpack data from dataset and apply preprocessing
-            model.optimize_parameters(i)   # calculate loss functions, get gradients, update network weights
+            # model.optimize_parameters(i)   # calculate loss functions, get gradients, update network weights
+            model.optimize_parameters() 
 
             if opt.is_master and total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk
                 losses = model.get_current_losses('train')
@@ -97,7 +98,8 @@ def main(rank):
                     model.set_input(val_data)
                     model.validate_iter()
                 model.train()
-                val_losses = model.get_current_losses('val_iter')
+                # val_losses = model.get_current_losses('val_iter')
+                val_losses = model.get_current_losses('val')
                 for loss_name, loss_val in val_losses.items():
                     writer.add_scalars(f"{loss_name}", {'val': loss_val}, global_step=total_iters)
                 if total_iters % opt.vis_freq == 0:   # display images

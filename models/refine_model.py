@@ -21,8 +21,9 @@ import einops
 from .nerf_downX_model import GANLoss
 from .criterions import SSIM
 
-from .network_enhancer import EnhancerNetwork, FeatureLearningNetwork, FeatureLearningNetwork1by1
 from .network_codebook import VQCodebook, Codebook
+
+import torchsummary
 
 class RefineModel(BaseModel):
     @staticmethod
@@ -40,13 +41,9 @@ class RefineModel(BaseModel):
         # parser.add_argument('--patch_len', type=int, default=32)
         # parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
 
-        parser.add_argument('--embedding_dim', type=int, default=256)
-        parser.add_argument('--num_embeddings', type=int, default=4096)
-        parser.add_argument('--commitment_cost', type=float, default=0.25)
-        parser.add_argument('--inference', action='store_true')
 
-        parser.add_argument('--network_enhancer', action='store_true')
         parser.add_argument('--network_codebook', action='store_true')
+
 
         opt, _ = parser.parse_known_args()
         for key, network_name in opt.__dict__.items():
@@ -61,22 +58,9 @@ class RefineModel(BaseModel):
 
         self.model_names = ['Refine']
         self.netRefine = init_net(find_network_using_name(opt.refine_network)(opt), opt)
-
-        # Enhancer Network 초기화
-        self.netEnhancer = EnhancerNetwork(in_channels=3, num_residual_blocks=5).to(self.device)
-        # Initialize the FeatureLearningNetwork as netEnhancer
-        # self.netEnhancer = FeatureLearningNetwork(input_nc=3, ngf=opt.ngf).to(self.device)
-        # Initialize the FeatureLearningNetwork as netEnhancer
-        # self.netEnhancer = FeatureLearningNetwork1by1(input_nc=3, ngf=opt.ngf).to(self.device)
-        
-        # Codebook 초기화
-        # self.codebook = Codebook(opt.embedding_dim, opt.num_embeddings).to(self.device)
-        self.codebook = VQCodebook(opt.embedding_dim, opt.num_embeddings).to(self.device)
         
         self.models = {
-            'R': self.netRefine,
-            'Enhancer': self.netEnhancer,  # Enhancer Network 추가
-            'Codebook': self.codebook,  # codebook Network 추가
+            'R': self.netRefine
         }
         self.losses = {
             'vgg': VGGPerceptualLoss(opt),
@@ -86,19 +70,18 @@ class RefineModel(BaseModel):
             'grad': GradientLoss(opt),
             'ssim': SSIM(data_range=(-1,1))
         }
-        self.train_visual_names = ['sr_gt_refine', 'ref_patches']
-        if self.opt.network_codebook:
-            self.train_visual_names.append('sr_gt_refine_codebook')
+
+        self.train_visual_names = ['sr_gt_refine_codebook', 'hr_gt_codebook']
+            
         if self.opt.refine_as_gan:
             self.train_loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
         else:
             self.train_loss_names = ['mse', 'tot']
             self.val_iter_loss_names = ['mse', 'tot', 'psnr_input', 'psnr_refine']
         
-        self.val_iter_visual_names = ['sr_gt_refine', 'ref_patches']
+        self.val_iter_visual_names = ['sr_gt_refine_codebook']
         self.val_visual_names = ['sr_refine']
         self.test_visual_names = ['sr_refine', 'sr_imgs_gif', 'refined_imgs_gif']
-        self.test_loss_names = ['mse', 'tot', 'psnr_input', 'psnr_refine']
         
         if self.opt.refine_with_vgg:
             self.train_loss_names.append('vgg')
@@ -107,7 +90,7 @@ class RefineModel(BaseModel):
         if self.opt.refine_with_grad:
             self.train_loss_names.append('grad')
         
-
+        # armsgrad를 True로 할까 말까
         if self.isTrain:
             self.optimizer = torch.optim.Adam(self.netRefine.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizers = [self.optimizer]
@@ -118,54 +101,30 @@ class RefineModel(BaseModel):
                 self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
                 self.optimizers.append(self.optimizer_D)
     
-    def forward(self, idx=None):
+    def forward(self):
         # num_ref_patches가 8일 때 그 중 하나의 패치만 선택
         selected_patch_idx = 0  # 0부터 7까지 선택 가능, 여기서는 첫 번째 패치를 선택
         self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
-
-        # enhanced: Enhancer Network로 data_ref_patches를 사용해 data_sr_patch 보강
-        if self.opt.network_enhancer:
-            enhanced_sr_patch = self.netEnhancer(self.data_sr_patch)
-
-        # VQ-VAE Codebook을 이용하여 data_ref_patches를 생성 또는 보강
-        if self.opt.network_codebook:
-            # for train : HR => codebook => HR 
-            codebook_hr_patch, recon_loss_hr, codebook_loss_hr, commitment_loss_hr, _ = self.codebook(self.data_ref_patch, idx)
-            # for inference : SR => codebook => HR 
-            codebook_test_patch, recon_loss_lr, codebook_loss_lr, commitment_loss_lr, _ = self.codebook(self.data_sr_patch)
-        if self.opt.refine_network == 'unetgenerator':
-            # original
-            input = torch.cat((self.data_sr_patch, self.data_ref_patches), dim=1)
-
-            # enhanced
-            if self.opt.network_enhancer:
-                input = torch.cat((enhanced_sr_patch, self.data_ref_patch), dim=1)
-
-            # codebook
-            if self.opt.network_codebook:
-                if self.opt.inference: # test 
-                    # print(f"codebook_test_patch shape : {codebook_test_patch.shape}") 12,24,64,64
-                    input = torch.cat((self.data_sr_patch, codebook_test_patch), dim=1)
-                else: # train 
-                    input = torch.cat((self.data_sr_patch, codebook_hr_patch), dim=1)
-            self.pred = self.netRefine(input)
+        '''
+        print(f'============ref patches : {self.data_ref_patches.shape}')
+        if self.isTest:
+            self.data_ref_patch = self.data_ref_patches[selected_patch_idx, :, :, :]
+            self.data_ref_patch = self.data_ref_patch.unsqueeze(0)
         else:
-            self.pred = self.netRefine(self.data_sr_patch, codebook_hr_patch)
+            self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
+            
+        print(f'============ref patch : {self.data_ref_patch.shape}')
+        '''
 
-        self.sr_gt_refine = Visualizee('image', torch.cat([self.data_sr_patch[0], self.data_gt_patch[0], self.pred[0].detach()], dim=2), timestamp=True, name='sr_gt_refine', data_format='CHW', range=(-1, 1), img_format='png')
-        if self.opt.network_codebook:
-            codebook_hr_patch_cpu = codebook_hr_patch[0].detach().cpu().numpy()
-            codebook_hr_patch_cpu = torch.tensor(codebook_hr_patch_cpu).to(self.device)
-            self.sr_gt_refine_codebook = Visualizee('image', torch.cat([self.data_sr_patch[0], self.data_gt_patch[0], self.pred[0].detach(), codebook_hr_patch_cpu], dim=2), timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
+        self.pred, self.cb_hr_patch, self.loss_hr, self.loss_lr = self.netRefine(self.data_sr_patch, self.data_ref_patch)
 
-        # Save losses for later uses
-        if self.opt.network_codebook:
-            self.recon_loss_hr = recon_loss_hr
-            self.codebook_loss_hr = codebook_loss_hr 
-            self.commitment_loss_hr = commitment_loss_hr
-            self.recon_loss_lr = recon_loss_lr
-            self.codebook_loss_lr = codebook_loss_lr
-            self.commitment_loss_lr = commitment_loss_lr
+        self.sr_gt_refine_codebook = Visualizee('image', torch.cat([self.data_sr_patch[0], \
+                                self.data_gt_patch[0], self.pred[0].detach(), self.cb_hr_patch[0].detach()], dim=2),\
+                                timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
+
+        self.hr_gt_codebook = Visualizee('image', torch.cat([ self.data_ref_patch[0],self.cb_hr_patch[0]], dim=2),\
+                                timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
+
 
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
@@ -206,13 +165,13 @@ class RefineModel(BaseModel):
         self.backward_G()                   # calculate graidents for G
         self.optimizer_G.step()             # udpate G's weights
 
-    def optimize_parameters(self, idx=None):
+    def optimize_parameters(self):
         if self.opt.refine_as_gan:
             self.optimize_parameters_gan()
             return
 
-        self.forward(idx)
-        self.set_requires_grad([self.netRefine, self.netEnhancer, self.codebook], True) 
+        self.forward()
+        self.set_requires_grad(self.netRefine, True) 
         self.optimizer.zero_grad()  
         self.backward()           
         self.optimizer.step()
@@ -220,6 +179,7 @@ class RefineModel(BaseModel):
     def calculate_losses(self):
         self.loss_mse = 0.0
         self.loss_vgg, self.loss_l1 = 0.0, 0.0
+        
         if self.opt.refine_with_vgg:
             self.loss_vgg = self.losses['vgg'](self.pred, self.data_gt_patch) * self.opt.lambda_refine_vgg
         if self.opt.refine_with_l1:
@@ -228,10 +188,10 @@ class RefineModel(BaseModel):
             self.loss_mse = self.losses['mse'](self.pred, self.data_gt_patch) * self.opt.lambda_refine_mse
         self.loss_tot = self.loss_vgg + self.loss_mse + self.loss_l1   
         
-        if self.opt.network_codebook:
-            self.loss_tot += self.recon_loss_hr + self.codebook_loss_hr + self.opt.commitment_cost * self.commitment_loss_hr
-            self.loss_tot += self.recon_loss_lr + self.codebook_loss_lr + self.opt.commitment_cost * self.commitment_loss_lr
-            
+        # loss for codebook
+        self.loss_tot += self.loss_hr + self.loss_lr
+        self.loss_tot += self.losses['mse'](self.cb_hr_patch, self.data_ref_patch) * self.opt.lambda_refine_mse
+
         if self.opt.refine_with_grad:
             self.loss_grad = self.losses['grad'](self.pred, self.data_gt_patch) * self.opt.lambda_refine_grad
             self.loss_tot += self.loss_grad
@@ -239,9 +199,7 @@ class RefineModel(BaseModel):
         with torch.no_grad():
             self.loss_psnr_input = self.losses['psnr'](self.data_sr_patch, self.data_gt_patch)
             self.loss_psnr_refine = self.losses['psnr'](self.pred, self.data_gt_patch)
-
-    # def calculate_vis(self):
-        
+ 
 
     def backward(self):
         self.calculate_losses()
@@ -257,36 +215,18 @@ class RefineModel(BaseModel):
                 v = pack(v)
             setattr(self, f"data_{name}", v.to(self.device))
         # self.real = Visualizee('image', self.data_gan_real_rgbs[0], timestamp=True, name='real', data_format='HWC', range=(0, 1), img_format='png')
-        self.ref_patches = Visualizee('image', torch.cat([*self.data_ref_patches[0]], dim=2), timestamp=True, name='ref_patches', data_format='CHW', range=(-1, 1), img_format='png')
-        if self.data_ref_patches.shape[0] == 32:
-            # Reshape 32 patches into a 4x8 grid
-            patches = self.data_ref_patches[:, 0, :, :, :]
-            grid_patches = einops.rearrange(patches, '(h w) c H W -> h w c H W', h=4, w=8)
-
-            # Concatenate along the height and width dimensions to form a grid
-            visualized_image = einops.rearrange(grid_patches, 'h w c H W -> c (h H) (w W)')
-
-            # Now visualize the image using Visualizee
-            self.ref_patches = Visualizee(
-                'image',
-                visualized_image,
-                timestamp=True,
-                name='ref_patches',
-                data_format='CHW',
-                range=(-1, 1),
-                img_format='png'
-            )
-
+        # self.ref_patches = Visualizee('image', torch.cat([*self.data_ref_patches[0]], dim=2), timestamp=True, name='ref_patches', data_format='CHW', range=(-1, 1), img_format='png')
         if self.opt.refine_network == 'unetgenerator':
             self.data_ref_patches = self.data_ref_patches.view(self.data_ref_patches.shape[0], -1, self.data_ref_patches.shape[-2], self.data_ref_patches.shape[-1])
-
+    
     def validate_iter(self):
         self.forward()
         if not self.opt.refine_as_gan:
             self.calculate_losses()
         # self.calculate_vis()
-        self.sr_gt_refine.name = 'sr_gt_refine_val'
-        self.ref_patches.name = 'ref_patches_val'
+
+        self.sr_gt_refine_codebook.name = 'sr_gt_refine_val'
+        # self.ref_patches.name = 'ref_patches_val'
 
     def test(self, dataset):
         refined_imgs = []
@@ -294,53 +234,33 @@ class RefineModel(BaseModel):
         self.sr_refine = []
         sr_psnr = 0.0
         re_psnr = 0.0
-        total_loss = {}
-        num_batches = len(dataset.dataloader)
-
-        for i, data in enumerate(tqdm(dataset, desc="Testing", total=num_batches)):
+        for i, data in enumerate(tqdm(dataset, desc="Testing", total=len(dataset.dataloader))):
             self.set_input(data, need_pack=True)
+            #self.data_sr_patch = self.data_sr_patch.unsqueeze(0)
             self.forward()
-
-            # 손실 계산
-            self.calculate_losses()
-
-            # 각 손실을 누적
-            for loss_name, loss_val in self.get_current_losses('test').items():
-                if loss_name not in total_loss:
-                    total_loss[loss_name] = 0.0
-                total_loss[loss_name] += loss_val
-
-            # 이미지 초기화
             if i % self.opt.test_img_split == 0:
                 refine_img = torch.zeros((3, int(self.data_wh[1]), int(self.data_wh[0])))
                 sr_img = torch.zeros_like(refine_img)
                 gt_img = torch.zeros_like(refine_img)
-
-            # 패치별로 이미지 복원
             for p_idx, patch in enumerate(self.pred):
                 loc = [int(self.data_start_locs[p_idx][0]), int(self.data_start_locs[p_idx][1])]
-                refine_img[:, loc[1]: loc[1] + self.data_patch_len, loc[0]: loc[0] + self.data_patch_len] = patch
-                sr_img[:, loc[1]: loc[1] + self.data_patch_len, loc[0]: loc[0] + self.data_patch_len] = self.data_sr_patch[p_idx]
-                gt_img[:, loc[1]: loc[1] + self.data_patch_len, loc[0]: loc[0] + self.data_patch_len] = self.data_gt_patch[p_idx]
-
-            # 이미지 저장
-            if i % self.opt.test_img_split == self.opt.test_img_split - 1:  # finish refining
+                refine_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = patch
+                sr_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = self.data_sr_patch[0,p_idx]
+                gt_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = self.data_gt_patch[p_idx]
+            if i % self.opt.test_img_split == self.opt.test_img_split - 1: # finish refining
                 refined_imgs.append(refine_img)
                 sr_imgs.append(sr_img)
-
+            # sr_img = (sr_img + 1.0) / 2
+            # gt_img = (gt_img + 1.0) / 2
+            # refine_img = (refine_img + 1.0) / 2
+            # print(self.losses['psnr'](sr_img, gt_img), self.losses['psnr'](refine_img, gt_img))
                 if i != self.opt.test_img_split - 1:
                     sr_psnr += self.losses['ssim'](sr_img.unsqueeze(0), gt_img.unsqueeze(0))
                     re_psnr += self.losses['ssim'](refine_img.unsqueeze(0), gt_img.unsqueeze(0))
 
                 self.sr_refine.append(
-                    Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i // self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
+                    Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i//self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
                 )
-
-        # 평균 손실 계산 및 출력
-        avg_losses = {k: v / num_batches for k, v in total_loss.items()}
-        print("Average Test Losses:")
-        print(' '.join([f"{k}: {v:.3e}" for k, v in avg_losses.items()]))
-
         self.sr_imgs_gif = Visualizee('gif', sr_imgs, timestamp=False, name=f'sr', data_format='CHW', range=(-1, 1))
         self.refined_imgs_gif = Visualizee('gif', refined_imgs, timestamp=False, name=f'refine', data_format='CHW', range=(-1, 1))
 

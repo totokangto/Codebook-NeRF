@@ -24,6 +24,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--continue_train', action='store_true', help='continue training: load the latest model')
         parser.add_argument('--init_weights', type=str, default=None, help='initialize weights from an existing model, in format [name]:[epoch]')
         parser.add_argument('--init_weights_keys', type=str, default='.+', help='regex for weights keys to be loaded')
+        parser.add_argument('--pretrained_dir', type=str, default=None, help='name of the pretrained.')
 
         parser.add_argument('--fix_layers', type=str, default=None, help='regex for fix layers')
 
