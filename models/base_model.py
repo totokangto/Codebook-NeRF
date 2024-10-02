@@ -90,8 +90,9 @@ class BaseModel(ABC, Configurable):
             self.load_networks(init_weights_name, init_weights_epoch, opt.init_weights_keys)
         
         if not self.isTrain or opt.continue_train:
-            if opt.load_epoch == 'latest' or opt.load_epoch == 'best':
-                #current_epoch = max([int(os.path.basename(x).split('_')[0]) for x in glob.glob(os.path.join(self.save_dir, '*.pth')) if 'latest' not in x])
+            if opt.load_epoch == 'latest':
+                current_epoch = max([int(os.path.basename(x).split('_')[0]) for x in glob.glob(os.path.join(self.save_dir, '*.pth')) if 'latest' not in x])
+            elif opt.load_epoch == 'best':
                 current_epoch = 100         
             else:
                 current_epoch = int(opt.load_epoch)

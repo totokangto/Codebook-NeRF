@@ -7,8 +7,8 @@ batch_size=1
 option="mse_5"
 
 
-python test_refine.py --name llff-refine-$dataset-${option} \
-    --dataset_mode llff_refine --dataset_root /local_datasets/nerf_llff_data/${dataset} \
+python test_refine.py --name llff-refine-${dataset}-${option} \
+    --dataset_mode llff_refine --dataset_root ${data_root}/nerf_llff_data/${dataset} \
     --checkpoints_dir ./checkpoints/nerf-sr-refine/ --summary_dir ./logs/nerf-sr-refine --results_dir ./results/nerf-sr-refine \
     --img_wh $W $H --batch_size $batch_size \
     --model refine --test_split test_train --load_epoch best \

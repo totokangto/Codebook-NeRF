@@ -23,8 +23,6 @@ from .criterions import SSIM
 
 from .network_codebook import VQCodebook, Codebook
 
-import torchsummary
-
 class RefineModel(BaseModel):
     @staticmethod
     def modify_commandline_options(parser):
@@ -245,7 +243,6 @@ class RefineModel(BaseModel):
                 refined_imgs.append(refine_img)
                 sr_imgs.append(sr_img)
                 gt_imgs.append(gt_img)
-            
             # sr_img = (sr_img + 1.0) / 2
             # gt_img = (gt_img + 1.0) / 2
             # refine_img = (refine_img + 1.0) / 2
@@ -257,8 +254,11 @@ class RefineModel(BaseModel):
                 self.sr_refine.append(
                     Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i//self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
                 )
-            if self.losses['psnr'](refine_img, gt_img) > test_psnr:
-                    test_psnr = self.losses['psnr'](refine_img, gt_img)
+
+            for i in range(len(refined_imgs)):
+                if self.losses['psnr'](refined_imgs[i], gt_imgs[i]) > test_psnr:
+                    test_psnr = self.losses['psnr'](refined_imgs[i], gt_imgs[i])
+
         print(f'best test psnr : {test_psnr:.2f}')
         self.sr_imgs_gif = Visualizee('gif', sr_imgs, timestamp=False, name=f'sr', data_format='CHW', range=(-1, 1))
         self.refined_imgs_gif = Visualizee('gif', refined_imgs, timestamp=False, name=f'refine', data_format='CHW', range=(-1, 1))
