@@ -21,7 +21,7 @@ from utils.visualizer import Visualizee
 class LLFFRefineDataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser):
-        parser.add_argument('--patch_len', type=int, default=256)
+        parser.add_argument('--patch_len', type=int, default=64)
         parser.add_argument('--ref_idx', type=int, default=0)
         parser.add_argument('--syn_dataroot', type=str, required=True)
         parser.add_argument('--aug_num', type=int, default=200)
@@ -138,8 +138,6 @@ class LLFFRefineDataset(BaseDataset):
                 #     T.ColorJitter.get_params(brightness=(0.9, 1.1), contrast=(0.9, 1.1), saturation=(0.9, 1.1), hue=(-0.05, 0.05))
                 # gt_pspc_img = self.jitterImage(gt_pspc_img, fn_idx, b, c, s, h)
                 # sr_pspc_img = self.jitterImage(sr_pspc_img, fn_idx, b, c, s, h)
-                gt_pspc_img.save(f'pspc/{i}-pspc_img_gt.png')
-                sr_pspc_img.save(f'pspc/{i}-pspc_img_sr.png')
                 # self.sr_gt_pspc_img = Visualizee('image', torch.cat([sr_pspc_img, gt_pspc_img], dim=2), timestamp=True, name='sr_gt_pspc_img', data_format='CHW', range=(-1, 1), img_format='png')
 
                 gt_pspc_imgs.append(self.transform(gt_pspc_img))

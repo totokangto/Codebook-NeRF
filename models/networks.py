@@ -503,22 +503,29 @@ class UnetGenerator(nn.Module, Configurable):
                                stride=stride, padding=1)
         )
         
-    # loss는 어캐할래
     def forward(self, sr, ref):
         z = self.encoder(sr)
         z = self.pre_quantization_conv(z)
 
         cb_hr_patch, loss_hr, cb_x1,cb_x2,cb_x3 = self.codebook(self.opt,ref)
-        _, loss_sr, _,_,_ = self.codebook(self.opt,sr)
-
-        x1 = self.up_1(z) # 128,16,16
-        x1 = torch.cat([x1, cb_x1], dim=1) # 256,16,16
-        x2 = self.up_2(x1)
-        x2 = torch.cat([x2, cb_x2], dim=1)
-        x3 = self.up_3(x2)
-        x3 = torch.cat([x3, cb_x3], dim=1)
-        x4 = self.up_4(x3)
-        return x4, cb_hr_patch, loss_hr, loss_sr
+        _, loss_sr, cb_s1,cb_s2,cb_s3 = self.codebook(self.opt,sr)
+        if self.opt.isTrain:
+            x1 = self.up_1(z) # 128,16,16
+            x1 = torch.cat([x1, cb_x1], dim=1) # 256,16,16
+            x2 = self.up_2(x1)
+            x2 = torch.cat([x2, cb_x2], dim=1)
+            x3 = self.up_3(x2)
+            x3 = torch.cat([x3, cb_x3], dim=1)
+            x4 = self.up_4(x3)
+        elif self.opt.isTest:
+            x1 = self.up_1(z) # 128,16,16
+            x1 = torch.cat([x1, cb_s1], dim=1) # 256,16,16
+            x2 = self.up_2(x1)
+            x2 = torch.cat([x2, cb_s2], dim=1)
+            x3 = self.up_3(x2)
+            x3 = torch.cat([x3, cb_s3], dim=1)
+            x4 = self.up_4(x3)
+        return x4, cb_hr_patch,  loss_hr, loss_sr
 
 class VQCodebook(nn.Module, Configurable):
     @staticmethod
