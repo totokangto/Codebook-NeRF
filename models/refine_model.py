@@ -90,6 +90,8 @@ class RefineModel(BaseModel):
         if self.opt.refine_with_grad:
             self.train_loss_names.append('grad')
         
+        #self.val_loss_names = ['tot']
+        
         # armsgrad를 True로 할까 말까
         if self.isTrain:
             self.optimizer = torch.optim.Adam(self.netRefine.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -105,16 +107,6 @@ class RefineModel(BaseModel):
         # num_ref_patches가 8일 때 그 중 하나의 패치만 선택
         selected_patch_idx = 0  # 0부터 7까지 선택 가능, 여기서는 첫 번째 패치를 선택
         self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
-        '''
-        print(f'============ref patches : {self.data_ref_patches.shape}')
-        if self.isTest:
-            self.data_ref_patch = self.data_ref_patches[selected_patch_idx, :, :, :]
-            self.data_ref_patch = self.data_ref_patch.unsqueeze(0)
-        else:
-            self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
-            
-        print(f'============ref patch : {self.data_ref_patch.shape}')
-        '''
 
         self.pred, self.cb_hr_patch, self.loss_hr, self.loss_lr = self.netRefine(self.data_sr_patch, self.data_ref_patch)
 
@@ -232,8 +224,10 @@ class RefineModel(BaseModel):
         refined_imgs = []
         sr_imgs = []
         self.sr_refine = []
+        gt_imgs = []
         sr_psnr = 0.0
         re_psnr = 0.0
+        test_psnr = 0.0
         for i, data in enumerate(tqdm(dataset, desc="Testing", total=len(dataset.dataloader))):
             self.set_input(data, need_pack=True)
             #self.data_sr_patch = self.data_sr_patch.unsqueeze(0)
@@ -245,11 +239,13 @@ class RefineModel(BaseModel):
             for p_idx, patch in enumerate(self.pred):
                 loc = [int(self.data_start_locs[p_idx][0]), int(self.data_start_locs[p_idx][1])]
                 refine_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = patch
-                sr_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = self.data_sr_patch[0,p_idx]
+                sr_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = self.data_sr_patch[p_idx]
                 gt_img[:, loc[1]: loc[1]+self.data_patch_len, loc[0]: loc[0]+self.data_patch_len] = self.data_gt_patch[p_idx]
             if i % self.opt.test_img_split == self.opt.test_img_split - 1: # finish refining
                 refined_imgs.append(refine_img)
                 sr_imgs.append(sr_img)
+                gt_imgs.append(gt_img)
+            
             # sr_img = (sr_img + 1.0) / 2
             # gt_img = (gt_img + 1.0) / 2
             # refine_img = (refine_img + 1.0) / 2
@@ -261,6 +257,9 @@ class RefineModel(BaseModel):
                 self.sr_refine.append(
                     Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i//self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
                 )
+            if self.losses['psnr'](refine_img, gt_img) > test_psnr:
+                    test_psnr = self.losses['psnr'](refine_img, gt_img)
+        print(f'best test psnr : {test_psnr:.2f}')
         self.sr_imgs_gif = Visualizee('gif', sr_imgs, timestamp=False, name=f'sr', data_format='CHW', range=(-1, 1))
         self.refined_imgs_gif = Visualizee('gif', refined_imgs, timestamp=False, name=f'refine', data_format='CHW', range=(-1, 1))
 
@@ -290,6 +289,7 @@ class RefineModel(BaseModel):
             # gt_img = (gt_img + 1.0) / 2
             # refine_img = (refine_img + 1.0) / 2
             # print(self.losses['psnr'](sr_img, gt_img), self.losses['psnr'](refine_img, gt_img))
+            
                 if i != self.opt.test_img_split - 1:
                     sr_psnr += self.losses['ssim'](sr_img.unsqueeze(0), gt_img.unsqueeze(0))
                     re_psnr += self.losses['ssim'](refine_img.unsqueeze(0), gt_img.unsqueeze(0))

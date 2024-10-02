@@ -1,17 +1,14 @@
 #!/usr/bin/bash
 
-#SBATCH -J Nerfsr-Train-llff-downX-refine-patchsamearea1_enhancer
+#SBATCH -J nerf-sr
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-gpu=8
-#SBATCH --mem-per-gpu=32G
-#SBATCH -p batch_ugrad
-#SBATCH -t 3-0
-#SBATCH -o logs/slurm-%A.outs
+#SBATCH --cpus-per-gpu=16
+#SBATCH --mem-per-gpu=128G
+#SBATCH -p batch_eebme_ugrad
+#SBATCH -w moana-y4
+#SBATCH -t 1-0
+#SBATCH -o logs/slurm-%A.out
 
-cat $0
-pwd
-which python
-hostname
 
 # train: original llff nerf
 # bash scripts/train_llff.sh

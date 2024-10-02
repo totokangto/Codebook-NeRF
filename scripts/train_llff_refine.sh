@@ -4,19 +4,16 @@ H=378
 accelerator="dp"
 downscale=2
 batch_size=32
-option="patchsamearea1_codebook_inferenceloss"
-# option="patchsamearea1_featurelearning1by1"
+option="basic"
 
-data_root='/data/csj000714/data'
 
-python train_refine.py --name llff-refine-$dataset-${H}x${W}-ni${N_importance}-${accelerator}-ds${downscale}-${option} --accelerator $accelerator \
-    --dataset_mode llff_refine --dataset_root ${data_root}/nerf_llff_data/${dataset} \
+python train_refine.py --name llff-refine-$dataset-${option} --accelerator $accelerator \
+    --dataset_mode llff_refine --dataset_root /local_datasets/nerf_llff_data/${dataset} \
     --checkpoints_dir ./checkpoints/nerf-sr-refine --summary_dir ./logs/nerf-sr-refine \
     --img_wh $W $H --batch_size $batch_size \
-    --n_epochs 3 --n_epochs_decay 0 \
-    --print_freq 100 --vis_freq 100 --val_freq 1000 --save_epoch_freq 1 --val_epoch_freq 1 \
+    --n_epochs 100 --n_epochs_decay 0 \
+    --print_freq 7500 --vis_freq 7500 --val_freq 15000 --save_epoch_freq 20 --val_epoch_freq 4 \
     --model refine \
     --lr_policy exp --lr 5e-4 --lr_final 5e-6 \
     --syn_dataroot ./checkpoints/nerf-sr/llff-${dataset}-${H}x${W}-ni64-dp-ds${downscale}/30_val_vis \
-    --refine_with_l1 \
-    --network_codebook
+    --refine_with_l1 --network_codebook 
