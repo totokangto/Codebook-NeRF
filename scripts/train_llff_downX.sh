@@ -5,9 +5,9 @@ downscale=2
 N_importance=64
 # if downscale=4, change batchsize=128
 batch_size=512 
-dataset='fern'
+dataset='horns'
 
-data_root='/data/csj000714/data'
+data_root="/local_datasets"
 
 python train.py --name llff-${dataset}-${H}x${W}-ni${N_importance}-${accelerator}-ds${downscale} --accelerator $accelerator \
     --dataset_mode llff_downX --dataset_root ${data_root}/nerf_llff_data/${dataset} \

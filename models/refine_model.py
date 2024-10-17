@@ -76,6 +76,7 @@ class RefineModel(BaseModel):
         else:
             self.train_loss_names = ['mse', 'tot']
             self.val_iter_loss_names = ['mse', 'tot', 'psnr_input', 'psnr_refine']
+            self.val_loss_names = ['psnr']
         
         self.val_iter_visual_names = ['sr_gt_refine_codebook']
         self.val_visual_names = ['sr_refine']
@@ -106,13 +107,13 @@ class RefineModel(BaseModel):
         selected_patch_idx = 0  # 0부터 7까지 선택 가능, 여기서는 첫 번째 패치를 선택
         self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
 
-        self.pred, self.cb_hr_patch, self.loss_hr, self.loss_lr = self.netRefine(self.data_sr_patch, self.data_ref_patch)
+        self.pred, self.cb_patch, self.loss_hr, self.loss_lr = self.netRefine(self.data_sr_patch, self.data_ref_patch)
 
         self.sr_gt_refine_codebook = Visualizee('image', torch.cat([self.data_sr_patch[0], \
-                                self.data_gt_patch[0], self.pred[0].detach(), self.cb_hr_patch[0].detach()], dim=2),\
+                                self.data_gt_patch[0], self.pred[0].detach(), self.cb_patch[0].detach()], dim=2),\
                                 timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
 
-        self.hr_gt_codebook = Visualizee('image', torch.cat([ self.data_ref_patch[0],self.cb_hr_patch[0]], dim=2),\
+        self.hr_gt_codebook = Visualizee('image', torch.cat([ self.data_ref_patch[0],self.cb_patch[0]], dim=2),\
                                 timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
 
 
@@ -180,7 +181,7 @@ class RefineModel(BaseModel):
         
         # loss for codebook
         self.loss_tot += self.loss_hr + self.loss_lr
-        self.loss_tot += self.losses['mse'](self.cb_hr_patch, self.data_ref_patch) * self.opt.lambda_refine_mse
+        self.loss_tot += self.losses['mse'](self.cb_patch, self.data_ref_patch) * self.opt.lambda_refine_mse
 
         if self.opt.refine_with_grad:
             self.loss_grad = self.losses['grad'](self.pred, self.data_gt_patch) * self.opt.lambda_refine_grad
@@ -243,6 +244,7 @@ class RefineModel(BaseModel):
                 refined_imgs.append(refine_img)
                 sr_imgs.append(sr_img)
                 gt_imgs.append(gt_img)
+                #print(self.losses['psnr'](refine_img, gt_img))
             # sr_img = (sr_img + 1.0) / 2
             # gt_img = (gt_img + 1.0) / 2
             # refine_img = (refine_img + 1.0) / 2
@@ -254,12 +256,11 @@ class RefineModel(BaseModel):
                 self.sr_refine.append(
                     Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i//self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
                 )
+                if self.losses['psnr'](refine_img, gt_img) > test_psnr:
+                    test_psnr = self.losses['psnr'](refine_img, gt_img)
 
-            for i in range(len(refined_imgs)):
-                if self.losses['psnr'](refined_imgs[i], gt_imgs[i]) > test_psnr:
-                    test_psnr = self.losses['psnr'](refined_imgs[i], gt_imgs[i])
 
-        print(f'best test psnr : {test_psnr:.2f}')
+        print(f'\n best test psnr : {test_psnr:.2f}')
         self.sr_imgs_gif = Visualizee('gif', sr_imgs, timestamp=False, name=f'sr', data_format='CHW', range=(-1, 1))
         self.refined_imgs_gif = Visualizee('gif', refined_imgs, timestamp=False, name=f'refine', data_format='CHW', range=(-1, 1))
 
@@ -269,6 +270,7 @@ class RefineModel(BaseModel):
         self.sr_refine = []
         sr_psnr = 0.0
         re_psnr = 0.0
+        val_psnr = 0.0
         for i, data in enumerate(tqdm(dataset, desc="Testing", total=len(dataset.dataloader))):
             self.set_input(data, need_pack=True)
             self.forward()
@@ -285,6 +287,7 @@ class RefineModel(BaseModel):
             if i % self.opt.test_img_split == self.opt.test_img_split - 1: # finish refining
                 refined_imgs.append(refine_img)
                 sr_imgs.append(sr_img)
+                #print(self.losses['psnr'](refine_img, gt_img))
             # sr_img = (sr_img + 1.0) / 2
             # gt_img = (gt_img + 1.0) / 2
             # refine_img = (refine_img + 1.0) / 2
@@ -297,6 +300,10 @@ class RefineModel(BaseModel):
                 self.sr_refine.append(
                     Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i//self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
                 )
+                if self.losses['psnr'](refine_img, gt_img) > val_psnr:
+                    val_psnr = self.losses['psnr'](refine_img, gt_img)
+                self.loss_psnr = val_psnr
+        print(f'\n best val psnr : {val_psnr}')
 
     def inference(self, dataset):
         # input a whole image

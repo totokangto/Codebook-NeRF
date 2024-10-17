@@ -508,7 +508,8 @@ class UnetGenerator(nn.Module, Configurable):
         z = self.pre_quantization_conv(z)
 
         cb_hr_patch, loss_hr, cb_x1,cb_x2,cb_x3 = self.codebook(self.opt,ref)
-        _, loss_sr, cb_s1,cb_s2,cb_s3 = self.codebook(self.opt,sr)
+        cb_sr_patch, loss_sr, cb_s1,cb_s2,cb_s3 = self.codebook(self.opt,sr)
+
         if self.opt.isTrain:
             x1 = self.up_1(z) # 128,16,16
             x1 = torch.cat([x1, cb_x1], dim=1) # 256,16,16
@@ -517,7 +518,9 @@ class UnetGenerator(nn.Module, Configurable):
             x3 = self.up_3(x2)
             x3 = torch.cat([x3, cb_x3], dim=1)
             x4 = self.up_4(x3)
-        elif self.opt.isTest:
+            return x4, cb_hr_patch,loss_hr, loss_sr
+        
+        else:
             x1 = self.up_1(z) # 128,16,16
             x1 = torch.cat([x1, cb_s1], dim=1) # 256,16,16
             x2 = self.up_2(x1)
@@ -525,7 +528,7 @@ class UnetGenerator(nn.Module, Configurable):
             x3 = self.up_3(x2)
             x3 = torch.cat([x3, cb_s3], dim=1)
             x4 = self.up_4(x3)
-        return x4, cb_hr_patch,  loss_hr, loss_sr
+            return x4, cb_sr_patch,loss_hr, loss_sr
 
 class VQCodebook(nn.Module, Configurable):
     @staticmethod

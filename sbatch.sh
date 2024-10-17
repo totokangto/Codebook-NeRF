@@ -2,11 +2,11 @@
 
 #SBATCH -J nerf-sr
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-gpu=16
-#SBATCH --mem-per-gpu=128G
+#SBATCH --cpus-per-gpu=8
+#SBATCH --mem-per-gpu=32G
 #SBATCH -p batch_eebme_ugrad
-#SBATCH -w moana-y4
-#SBATCH -t 1-0
+#SBATCH -w moana-y7
+#SBATCH -t 2-0
 #SBATCH -o logs/slurm-%A.out
 
 
@@ -14,14 +14,14 @@
 # bash scripts/train_llff.sh
 
 # train
-# bash scripts/train_llff_downX.sh
+bash scripts/train_llff_downX.sh
 
 # test
 # bash scripts/test_llff_downX.sh
 
 # # Refinement
 # python warp.py
-bash scripts/train_llff_refine.sh
+# bash scripts/train_llff_refine.sh
 
 # test
 # bash scripts/test_llff_refine.sh

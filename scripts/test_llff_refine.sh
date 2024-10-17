@@ -5,7 +5,8 @@ H=378
 downscale=2
 batch_size=1
 option="mse_5"
-
+data_root="/local_datasets"
+ 
 
 python test_refine.py --name llff-refine-${dataset}-${option} \
     --dataset_mode llff_refine --dataset_root ${data_root}/nerf_llff_data/${dataset} \

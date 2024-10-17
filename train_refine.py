@@ -53,6 +53,7 @@ def main(rank):
     total_iters = current_epoch * len(dataset.dataloader)      # the total number of training iterations
     writer = create_writer(opt)
     for epoch in range(current_epoch + 1, current_epoch + opt.n_epochs + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
+        opt.isTrain = True
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()    # timer for data loading per iteration
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
@@ -99,7 +100,7 @@ def main(rank):
                     model.validate_iter()
                 model.train()
                 # val_losses = model.get_current_losses('val_iter')
-                val_losses = model.get_current_losses('val')
+                val_losses = model.get_current_losses('val_iter')
                 for loss_name, loss_val in val_losses.items():
                     writer.add_scalars(f"{loss_name}", {'val': loss_val}, global_step=total_iters)
                 if total_iters % opt.vis_freq == 0:   # display images
@@ -112,16 +113,17 @@ def main(rank):
             model.save_networks('latest')
 
         if opt.is_master and epoch % opt.val_epoch_freq == 0:
+            opt.isTrain = False
             model.eval()
             with torch.no_grad():
                 model.validate(dataset_val)
-            val_losses = model.get_current_losses('val_iter')
+            val_losses = model.get_current_losses('val')
             for loss_name, loss_val in val_losses.items():
                 writer.add_scalars(f"{loss_name}", {'val_full': loss_val}, global_step=total_iters)
             save_visuals(os.path.join(model.save_dir, f"{epoch}_val_vis"), model.get_current_visuals('val'))
-            print("Validation losses |", ' '.join([f"{k}: {v:.3e}" for k, v in val_losses.items()]))
+            print("\n Validation losses |", ' '.join([f"{k}: {v:.3e}" for k, v in val_losses.items()]))
 
-            model.save_best_networks(val_losses['psnr_refine'])
+            model.save_best_networks_psnr(val_losses['psnr'])
     
         if opt.is_master:
             print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.n_epochs, time.time() - epoch_start_time))
