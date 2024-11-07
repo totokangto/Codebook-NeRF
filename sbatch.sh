@@ -1,13 +1,12 @@
 #!/usr/bin/bash
 
-#SBATCH -J nerf-sr
+#SBATCH -J train_llff_codebook
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-gpu=16
-#SBATCH --mem-per-gpu=128G
-#SBATCH -p batch_eebme_ugrad
-#SBATCH -w moana-y4
-#SBATCH -t 1-0
-#SBATCH -o logs/slurm-%A.out
+#SBATCH --cpus-per-gpu=8
+#SBATCH --mem-per-gpu=20G
+#SBATCH -p batch_ugrad
+#SBATCH -t 3-0
+#SBATCH -o logs/slurm-%A.outs
 
 
 # train: original llff nerf

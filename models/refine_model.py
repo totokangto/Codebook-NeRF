@@ -69,15 +69,15 @@ class RefineModel(BaseModel):
             'ssim': SSIM(data_range=(-1,1))
         }
 
-        self.train_visual_names = ['sr_gt_refine_codebook', 'hr_gt_codebook']
-            
+        self.train_visual_names = ['sr_gt_refine_codebook', 'gt_sr_hr_codebook', 'ref_patches']
         if self.opt.refine_as_gan:
             self.train_loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
         else:
             self.train_loss_names = ['mse', 'tot']
+            self.val_loss_names = ['psnr']
             self.val_iter_loss_names = ['mse', 'tot', 'psnr_input', 'psnr_refine']
         
-        self.val_iter_visual_names = ['sr_gt_refine_codebook']
+        self.val_iter_visual_names = ['sr_gt_refine_codebook', 'gt_sr_hr_codebook', 'ref_patches']
         self.val_visual_names = ['sr_refine']
         self.test_visual_names = ['sr_refine', 'sr_imgs_gif', 'refined_imgs_gif']
         
@@ -112,8 +112,8 @@ class RefineModel(BaseModel):
                                 self.data_gt_patch[0], self.pred[0].detach(), self.cb_hr_patch[0].detach()], dim=2),\
                                 timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
 
-        self.hr_gt_codebook = Visualizee('image', torch.cat([ self.data_ref_patch[0],self.cb_hr_patch[0]], dim=2),\
-                                timestamp=True, name='sr_gt_refine_codebook', data_format='CHW', range=(-1, 1), img_format='png')
+        self.gt_sr_hr_codebook = Visualizee('image', torch.cat([ self.data_gt_patch[0], self.data_sr_patch[0], self.data_ref_patch[0], self.cb_hr_patch[0]], dim=2),\
+                                timestamp=True, name='gt_sr_hr_codebook', data_format='CHW', range=(-1, 1), img_format='png')
 
 
     def backward_D(self):
@@ -205,7 +205,7 @@ class RefineModel(BaseModel):
                 v = pack(v)
             setattr(self, f"data_{name}", v.to(self.device))
         # self.real = Visualizee('image', self.data_gan_real_rgbs[0], timestamp=True, name='real', data_format='HWC', range=(0, 1), img_format='png')
-        # self.ref_patches = Visualizee('image', torch.cat([*self.data_ref_patches[0]], dim=2), timestamp=True, name='ref_patches', data_format='CHW', range=(-1, 1), img_format='png')
+        self.ref_patches = Visualizee('image', torch.cat([*self.data_ref_patches[0]], dim=2), timestamp=True, name='ref_patches', data_format='CHW', range=(-1, 1), img_format='png')
         if self.opt.refine_network == 'unetgenerator':
             self.data_ref_patches = self.data_ref_patches.view(self.data_ref_patches.shape[0], -1, self.data_ref_patches.shape[-2], self.data_ref_patches.shape[-1])
     
@@ -215,8 +215,9 @@ class RefineModel(BaseModel):
             self.calculate_losses()
         # self.calculate_vis()
 
-        self.sr_gt_refine_codebook.name = 'sr_gt_refine_val'
-        # self.ref_patches.name = 'ref_patches_val'
+        self.sr_gt_refine_codebook.name = 'sr_gt_refine_codebook_val'
+        self.gt_sr_hr_codebook.name = 'gt_sr_hr_codebook_val'
+        self.ref_patches.name = 'ref_patches_val'
 
     def test(self, dataset):
         refined_imgs = []
@@ -269,6 +270,7 @@ class RefineModel(BaseModel):
         self.sr_refine = []
         sr_psnr = 0.0
         re_psnr = 0.0
+        val_psnr = 0.0
         for i, data in enumerate(tqdm(dataset, desc="Testing", total=len(dataset.dataloader))):
             self.set_input(data, need_pack=True)
             self.forward()
@@ -297,6 +299,13 @@ class RefineModel(BaseModel):
                 self.sr_refine.append(
                     Visualizee('image', torch.cat([sr_img, refine_img, gt_img], 2), timestamp=False, name=f'{i//self.opt.test_img_split}-sr-refine', data_format='CHW', range=(-1, 1), img_format='png')
                 )
+                # val_psnr_avg += self.losses['psnr'](refine_img, gt_img)
+                if self.losses['psnr'](refine_img, gt_img) > val_psnr:
+                    val_psnr = self.losses['psnr'](refine_img, gt_img)
+                self.loss_psnr = val_psnr
+        # self.loss_psnr_avg = val_psnr_avg / len(dataset.dataloader)
+        print(f'\n best val psnr : {val_psnr}')
+        # print(f'\n avg val psnr : {val_psnr_avg / len(dataset.dataloader)}')
 
     def inference(self, dataset):
         # input a whole image

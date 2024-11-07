@@ -1,216 +1,498 @@
-
 <!DOCTYPE html>
 <html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Codebook-NeRF">
+  <meta name="keywords" content="NeRF">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codebook-NeRF</title>
 
-<head lang="en">
-    <meta charset="UTF-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
 
-    <title>NeRF-SR</title>
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
 
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-
-<!--     <link rel="apple-touch-icon" href="apple-touch-icon.png"> -->
-<!--   <link rel="icon" type="image/png" href="img/seal_icon.png"> -->
-    <!-- Place favicon.ico in the root directory -->
-
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.8.0/codemirror.min.css">
-    <link rel="stylesheet" href="css/app.css">
-
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.8.0/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.3/clipboard.min.js"></script>
-    
-    <script src="js/app.js"></script>
-    
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2SC7YQN2LP"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-2SC7YQN2LP');
-    </script>
-
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <script src="./static/js/video_comparison.js"></script>
 </head>
-
 <body>
-    <div class="container" id="main">
-        <div class="row">
-            <h2 class="col-md-12 text-center">
-                NeRF-SR: High-Quality Neural Radiance Fields using Super-Sampling<br>
-                <small>
-                    ACM Multimedia 2022
-                </small>
-            </h2>
-        </div>
-        <div class="row">
-            <div class="col-md-12 text-center">
-                <ul class="list-inline">
-                    <li>
-                        <a href="https://cwchenwang.github.io/">
-                            Chen Wang
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/">
-                          Xian Wu
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/">
-                          Yuan-Chen Guo
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/">
-                          Song-Hai Zhang
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/">
-                          Yu-Wing Tai
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://cg.cs.tsinghua.edu.cn">
-                          Shi-Min Hu
-                        </a>
-                    </li>
-                </ul>
 
-                <ul class="list-inline">
-                    <li>
-                        Tsinghua University
-                    </li>
-                    <li>
-                        Kuaishou Technology
-                    </li>
-                    <li>
-                        HKUST
-                    </li>
-                </ul>
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">Codebook-NeRF</h1>
+          <h1 class="title is-2 publication-title">Improving NeRF resolution based on codebook</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://DrawingProcess.github.io">Seongjun Choi</a><sup>1</sup>&nbsp&nbsp
+            </span>
+            <span class="author-block">
+              <a href="https://yipengqin.github.io">Ganghyun Lee</a><sup>1</sup>&nbsp&nbsp
+            </span>
+            <span class="author-block">
+              <a href="https://sites.google.com/view/jungukkim">Jung Uk Kim</a><sup>1+</sup>&nbsp&nbsp
+            </span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>KyungHee University &nbsp&nbsp</span>
+          </div>
+
+          <div class="is-size-6 publication-authors">
+            <span class="author-block"><sup>+</sup>corresponding authors</span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="is-size-4 publication-authors">
+              <span class="author-block"><b>KSC 2024</b></span>
             </div>
-        </div>
+          </div>
 
-
-        <div class="row">
-                <div class="col-md-4 col-md-offset-4 text-center">
-                    <ul class="nav nav-pills nav-justified">
-                        <li>
-                            <a href="https://arxiv.org/abs/2112.01759">
-                            <image src="img/nerf-sr_paper_thumbnail.png" height="60px">
-                                <h4><strong>Paper</strong></h4>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="data/supp.pdf">
-                            <image src="img/nerf-sr_supp_thumbnail.png" height="60px">
-                                <h4><strong>Supp</strong></h4>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://youtu.be/c3Yx2nGvi8o">
-                            <image src="img/youtube_icon.png" height="60px"><br>
-                                <h4><strong>Video</strong></h4>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://github.com/cwchenwang/NeRF-SR">
-                            <image src="img/github.png" height="60px">
-                                <h4><strong>Code</strong></h4>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-        </div>
-
-
-
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2">
-                <h3>
-                    Abstract
-                </h3>
-                <p class="text-justify">
-                    We present NeRF-SR, a solution for high-resolution (HR) novel view synthesis with mostly low-resolution (LR) inputs. Our method is built upon Neural Radiance Fields (NeRF) \cite{mildenhall2020nerf} that predicts per-point density and color with a multi-layer perceptron. While producing images at arbitrary scales, NeRF struggles with resolutions that go beyond observed images. Our key insight is that NeRF benefits from 3D consistency, which means an observed pixel absorbs information from nearby views. We first exploit it by a super-sampling strategy that shoots multiple rays at each image pixel, which further enforces multi-view constraint at a sub-pixel level. Then, we show that NeRF-SR can further boost the performance of super-sampling by a refinement network that leverages the estimated depth at hand to hallucinate details from related patches on an HR reference image. Experiment results demonstrate that NeRF-SR generates high-quality results for novel view synthesis at HR on both synthetic and real-world datasets.
-                </p>
-                <image src="img/pipeline.png" class="img-responsive" alt="overview">
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/2403.17537.pdf"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <!-- Video Link. -->
+              <span class="link-block">
+                <a href="https://youtu.be/8Fm3O_NyreY"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-youtube"></i>
+                  </span>
+                  <span>Video</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="https://github.com/DrawingProcess/Codebook-NeRF"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span>
             </div>
+          </div>
         </div>
-
-
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2">
-                <h3>
-                    Video
-                </h3>
-                <div class="text-center">
-                    <div style="position:relative;padding-top:56.25%;">
-                        <iframe src="https://www.youtube.com/embed/c3Yx2nGvi8o" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-            
-
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2">
-                <h3>
-                    Results
-                </h3>
-                <p class="text-justify">
-                    NeRF-SR find sub-pixel level correspondence through super-sampling, which means missing details in the input can be found from other views that lie in the neighboring region in 3D space. Vanilla NeRF and bicubic produces blurry results. NeRF-SR relies purely on the input images of the scene and doesn't require any external priors.
-                </p>                
-                <br>
-                <video id="v0" width="100%" autoplay loop muted controls>
-                    <source src="img/comparison.mp4" type="video/mp4" />
-                </video>
-                <image src="img/blender.png" class="img-responsive" alt="blender"></image>
-                <image src="img/llff.png" class="img-responsive" alt="llff"></image>
-                <br>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2">
-                <h3>
-                    Citation
-                </h3>
-                <div class="form-group col-md-10 col-md-offset-1">
-                    <textarea id="bibtex" class="form-control" readonly>
-@article{wang2021nerf-sr,
-    title={NeRF-SR: High-Quality Neural Radiance Fields 
-            using Super-Sampling},
-    author={Chen Wang and Xian Wu and 
-            Yuan-Chen Guo and Song-Hai Zhang and 
-            Yu-Wing Tai and Shi-Min Hu},
-    journal={arXiv},
-    year={2021}
-}</textarea>
-            </div>
-        </div>
+      </div>
     </div>
+  </div>
+</section>
 
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2">
-                <h3>
-                    Acknowledgement
-                </h3>
-                <p class="text-justify">      
-                The website template was borrowed from <a href="http://mgharbi.com/">Michaël Gharbi</a> and <a href="https://bmild.github.io/">Ben Mildenhall</a>.
-                </p>
-            </div>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            In this paper, we propose a new NeRF[1] method that can restore high-resolution details of low-resolution images without reference images.
+            To this end, while maintaining the Super Resolution process of NeRF-SR[2], the codebook structure of VQ-VAE[3] is introduced to learn the patterns of high-resolution images and improve the definition technique.
+            The number of embedding vectors in the codebook was increased to learn more high-resolution information, and it is trained to imitate high-resolution latent characteristics without reference images through Imaging Inference.
+            As a result of the experiment, the proposed model maintained the PSNR performance of NeRF-SR[2], and succeeded in generating clear and detail-rich images.
+          </p>
         </div>
+      </div>
     </div>
+    <!--/ Abstract. -->
+    <!-- Paper video. -->
+    <!-- <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Video</h2>
+        <div class="publication-video">
+          <iframe src="https://www.youtube.com/embed/T_9l3gW3B4I?si=0RmLUN0K2i9KvAEk"
+                  frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div> -->
+    <!--/ Paper video. -->
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h3 class="title is-3 is-centered" style="text-align: center;">Codebook-NeRF</h2>
+        <div class="content">
+          <img src="./static/images/pipeline_train.png" alt="Codebook-NeRF Pipeline" width="100%">
+          <p>
+            <b>Train Pipeline of Codebook-NeRF:</b>
+            Train SR (low-resolution) patches to mimic the characteristics of HR (high-resolution) patches.
+            (a) Input both HR and SR patches into the codebook.
+            (b) Learn high-resolution latent features from the HR patches through the codebook, training SR patches to imitate these features.
+            (c) Reconstruct HR patches' latent features using a decoder, combining the output from the codebook at each deconvolution layer to produce a high-resolution image.
+            (d) Employ a UNet structure to enhance reconstruction by incorporating high-resolution details obtained at each stage as additional input.
+          </p>
+          <br>
+          <img src="./static/images/pipeline_test.png" alt="Codebook-NeRF Pipeline" width="100%">
+          <p>
+            <b>Test Pipeline of Codebook-NeRF:</b>
+            Use only SR patches to restore high-resolution images.
+            (a) Input SR patches into the codebook to generate latent representations with high-resolution features.
+            (b) Pass these representations to the decoder to produce the final high-resolution image.
+            (c) Apply high-resolution details learned by the codebook to SR patches, enabling high-resolution restoration without needing reference images.
+          </p>
+          <p>
+            <b>Visualization:</b> Here are examples of HuGS on different scenes (datasets). More results can be found in the paper and the data.
+
+          </p>
+          <div class="video-grid-6 has-text-centered">
+            <div>(1) Input</div>
+            <div>(2) Seg. w/ SfM</div>
+            <div>(3) H<sup>SfM</sup></div>
+            <div>(4) Color Residual</div>
+            <div>(5) H<sup>CR</sup></div>
+            <div>(6) Static Map</div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/robust_yoda_2clutter2_input.png" alt="yoda gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_yoda_2clutter2_sfm.png" alt="yoda sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_yoda_2clutter2_sfm_mask.png" alt="yoda sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_yoda_2clutter2_residual.png" alt="yoda residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_yoda_2clutter2_res_mask.png" alt="yoda res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_yoda_2clutter2_final_mask.png" alt="yoda final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/robust_crab_99932_input.png" alt="crab gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_crab_99932_sfm.png" alt="crab sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_crab_99932_sfm_mask.png" alt="crab sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_crab_99932_residual.png" alt="crab residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_crab_99932_res_mask.png" alt="crab res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_crab_99932_final_mask.png" alt="crab final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/robust_statue_IMG_4832_input.png" alt="statue gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_statue_IMG_4832_sfm.png" alt="statue sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_statue_IMG_4832_sfm_mask.png" alt="statue sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_statue_IMG_4832_residual.png" alt="statue residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_statue_IMG_4832_res_mask.png" alt="statue res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_statue_IMG_4832_final_mask.png" alt="statue final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/robust_andbot_IMG_2025_input.png" alt="andbot gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_andbot_IMG_2025_sfm.png" alt="andbot sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_andbot_IMG_2025_sfm_mask.png" alt="andbot sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_andbot_IMG_2025_residual.png" alt="andbot residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_andbot_IMG_2025_res_mask.png" alt="andbot res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/robust_andbot_IMG_2025_final_mask.png" alt="andbot final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/kubric_pillow_rgba_00021_input.png" alt="pillow gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_pillow_rgba_00021_sfm.png" alt="pillow sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_pillow_rgba_00021_sfm_mask.png" alt="pillow sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_pillow_rgba_00021_residual.png" alt="pillow residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_pillow_rgba_00021_res_mask.png" alt="pillow res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_pillow_rgba_00021_final_mask.png" alt="pillow final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/kubric_cars_rgba_00070_input.png" alt="cars gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_cars_rgba_00070_sfm.png" alt="cars sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_cars_rgba_00070_sfm_mask.png" alt="cars sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_cars_rgba_00070_residual.png" alt="cars residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_cars_rgba_00070_res_mask.png" alt="cars res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/kubric_cars_rgba_00070_final_mask.png" alt="cars final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/phototourism_brandenburg_20366299_2271189237_input.png" alt="brandenburg gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_brandenburg_20366299_2271189237_sfm.png" alt="brandenburg sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_brandenburg_20366299_2271189237_sfm_mask.png" alt="brandenburg sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_brandenburg_20366299_2271189237_residual.png" alt="brandenburg residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_brandenburg_20366299_2271189237_res_mask.png" alt="brandenburg res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_brandenburg_20366299_2271189237_final_mask.png" alt="brandenburg final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/phototourism_sacre_20179898_3676553790_input.png" alt="sacre gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_sacre_20179898_3676553790_sfm.png" alt="sacre sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_sacre_20179898_3676553790_sfm_mask.png" alt="sacre sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_sacre_20179898_3676553790_residual.png" alt="sacre residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_sacre_20179898_3676553790_res_mask.png" alt="sacre res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_sacre_20179898_3676553790_final_mask.png" alt="sacre final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/phototourism_taj_61293486_6619693529_input.png" alt="taj gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_taj_61293486_6619693529_sfm.png" alt="taj sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_taj_61293486_6619693529_sfm_mask.png" alt="taj sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_taj_61293486_6619693529_residual.png" alt="taj residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_taj_61293486_6619693529_res_mask.png" alt="taj res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_taj_61293486_6619693529_final_mask.png" alt="taj final mask" width="100%"></div>
+          </div>
+          <div class="video-grid-6 has-text-centered">
+            <div><img src="./static/images/segmentation_visualization/phototourism_trevi_01005006_6303451772_input.png" alt="trevi gt" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_trevi_01005006_6303451772_sfm.png" alt="trevi sfm" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_trevi_01005006_6303451772_sfm_mask.png" alt="trevi sfm mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_trevi_01005006_6303451772_residual.png" alt="trevi residual" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_trevi_01005006_6303451772_res_mask.png" alt="trevi res mask" width="100%"></div>
+            <div><img src="./static/images/segmentation_visualization/phototourism_trevi_01005006_6303451772_final_mask.png" alt="trevi final mask" width="100%"></div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+</section>
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h3 class="title is-3 is-centered" style="text-align: center;">Rendering Results</h2>
+        <p>
+          <b>Comparisons on the Distractor Dataset:</b>  Our method can better preserve static details while ignoring transient distractors.
+        </p>
+        <br>
+        <div class="content has-text-centered">
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">BabyYoda</div>
+            <div>
+              Mip-NeRF 360
+              <video class="video" preload="auto" id="yoda1" loop playsinline autoPlay muted src="static/videos/compare_yoda_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['yoda2', 'yoda3'])"></video>
+              <canvas height=0 class="videoMerge" id="yoda1Merge"></canvas>
+            </div>
+            <div>
+              w/ RobustNeRF
+              <video class="video" preload="auto" id="yoda2" loop playsinline autoPlay muted src="static/videos/compare_yoda_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="yoda2Merge"></canvas>
+            </div>
+            <div>
+              w/ HuGS (<b>ours</b>) 
+              <video class="video" preload="auto" id="yoda3" loop playsinline autoPlay muted src="static/videos/compare_yoda_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="yoda3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Crab</div>
+            <div>
+              <video class="video" preload="auto" id="crab1" loop playsinline autoPlay muted src="static/videos/compare_crab_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['crab2', 'crab3'])"></video>
+              <canvas height=0 class="videoMerge" id="crab1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="crab2" loop playsinline autoPlay muted src="static/videos/compare_crab_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="crab2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="crab3" loop playsinline autoPlay muted src="static/videos/compare_crab_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="crab3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Statue</div>
+            <div>
+              <video class="video" preload="auto" id="t_balloon_statue1" loop playsinline autoPlay muted src="static/videos/compare_t_balloon_statue_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['t_balloon_statue2', 't_balloon_statue3'])"></video>
+              <canvas height=0 class="videoMerge" id="t_balloon_statue1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="t_balloon_statue2" loop playsinline autoPlay muted src="static/videos/compare_t_balloon_statue_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="t_balloon_statue2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="t_balloon_statue3" loop playsinline autoPlay muted src="static/videos/compare_t_balloon_statue_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="t_balloon_statue3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Android</div>
+            <div>
+              <video class="video" preload="auto" id="and-bot1" loop playsinline autoPlay muted src="static/videos/compare_and-bot_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['and-bot2', 'and-bot3'])"></video>
+              <canvas height=0 class="videoMerge" id="and-bot1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="and-bot2" loop playsinline autoPlay muted src="static/videos/compare_and-bot_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="and-bot2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="and-bot3" loop playsinline autoPlay muted src="static/videos/compare_and-bot_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="and-bot3Merge"></canvas>
+            </div>
+          </div>
+        </div>
+        <br>
+        <p>
+          <b>Comparisons on the Kubric Dataset:</b>
+        </p>
+        <br>
+        <div class="content has-text-centered">
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Pillow</div>
+            <div>
+              Mip-NeRF 360
+              <video class="video" preload="auto" id="pillow1" loop playsinline autoPlay muted src="static/videos/compare_pillow_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['pillow2', 'pillow3'])"></video>
+              <canvas height=0 class="videoMerge" id="pillow1Merge"></canvas>
+            </div>
+            <div>
+              w/ RobustNeRF
+              <video class="video" preload="auto" id="pillow2" loop playsinline autoPlay muted src="static/videos/compare_pillow_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="pillow2Merge"></canvas>
+            </div>
+            <div>
+              w/ HuGS (<b>ours</b>) 
+              <video class="video" preload="auto" id="pillow3" loop playsinline autoPlay muted src="static/videos/compare_pillow_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="pillow3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Chairs</div>
+            <div>
+              <video class="video" preload="auto" id="chair1" loop playsinline autoPlay muted src="static/videos/compare_chair_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['chair2', 'chair3'])"></video>
+              <canvas height=0 class="videoMerge" id="chair1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="chair2" loop playsinline autoPlay muted src="static/videos/compare_chair_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="chair2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="chair3" loop playsinline autoPlay muted src="static/videos/compare_chair_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="chair3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Cars</div>
+            <div>
+              <video class="video" preload="auto" id="cars1" loop playsinline autoPlay muted src="static/videos/compare_car_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['cars2', 'cars3'])"></video>
+              <canvas height=0 class="videoMerge" id="cars1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="cars2" loop playsinline autoPlay muted src="static/videos/compare_car_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="cars2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="cars3" loop playsinline autoPlay muted src="static/videos/compare_car_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="cars3Merge"></canvas>
+            </div>
+          </div>
+        </div>
+        <br>
+        <p>
+          <b>Comparisons on the Phototourism Dataset:</b>
+        </p>
+        <br>
+        <div class="content has-text-centered">
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Brandenburg Gate</div>
+            <div>
+              Mip-NeRF 360
+              <video class="video" preload="auto" id="brandenburg_gate1" loop playsinline autoPlay muted src="static/videos/compare_brandenburg_gate_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['brandenburg_gate2', 'brandenburg_gate3'])"></video>
+              <canvas height=0 class="videoMerge" id="brandenburg_gate1Merge"></canvas>
+            </div>
+            <div>
+              w/ RobustNeRF
+              <video class="video" preload="auto" id="brandenburg_gate2" loop playsinline autoPlay muted src="static/videos/compare_brandenburg_gate_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="brandenburg_gate2Merge"></canvas>
+            </div>
+            <div>
+              w/ HuGS (<b>ours</b>)  
+              <video class="video" preload="auto" id="brandenburg_gate3" loop playsinline autoPlay muted src="static/videos/compare_brandenburg_gate_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="brandenburg_gate3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Sacre Coeur</div>
+            <div>
+              <video class="video" preload="auto" id="sacre_coeur1" loop playsinline autoPlay muted src="static/videos/compare_sacre_coeur_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['sacre_coeur2', 'sacre_coeur3'])"></video>
+              <canvas height=0 class="videoMerge" id="sacre_coeur1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="sacre_coeur2" loop playsinline autoPlay muted src="static/videos/compare_sacre_coeur_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="sacre_coeur2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="sacre_coeur3" loop playsinline autoPlay muted src="static/videos/compare_sacre_coeur_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="sacre_coeur3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Taj Mahal</div>
+            <div>
+              <video class="video" preload="auto" id="taj_mahal1" loop playsinline autoPlay muted src="static/videos/compare_taj_mahal_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['taj_mahal2', 'taj_mahal3'])"></video>
+              <canvas height=0 class="videoMerge" id="taj_mahal1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="taj_mahal2" loop playsinline autoPlay muted src="static/videos/compare_taj_mahal_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="taj_mahal2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="taj_mahal3" loop playsinline autoPlay muted src="static/videos/compare_taj_mahal_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="taj_mahal3Merge"></canvas>
+            </div>
+          </div>
+          <div class="video-grid-3-with-left">
+            <div class="vertical-text">Trevi Fountain</div>
+            <div>
+              <video class="video" preload="auto" id="trevi_fountain1" loop playsinline autoPlay muted src="static/videos/compare_trevi_fountain_base.mp4" onplay="resizeAndPlayMultiWhenReady(this, ['trevi_fountain2', 'trevi_fountain3'])"></video>
+              <canvas height=0 class="videoMerge" id="trevi_fountain1Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="trevi_fountain2" loop playsinline autoPlay muted src="static/videos/compare_trevi_fountain_robustnerf.mp4"></video>
+              <canvas height=0 class="videoMerge" id="trevi_fountain2Merge"></canvas>
+            </div>
+            <div>
+              <video class="video" preload="auto" id="trevi_fountain3" loop playsinline autoPlay muted src="static/videos/compare_trevi_fountain_withmask.mp4"></video>
+              <canvas height=0 class="videoMerge" id="trevi_fountain3Merge"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</section>
+
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@article{chen2024nerfhugs,
+  author    = {Chen, Jiahao and Qin, Yipeng and Liu, Lingjie and Lu, Jiangbo and Li, Guanbin},
+  title     = {Codebook-NeRF: Improving NeRF resolution based on codebook},
+  journal   = {CVPR},
+  year      = {2024},
+}</code></pre>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link"
+         href="https://arxiv.org/pdf/2403.17537.pdf">
+        <i class="fas fa-file-pdf"></i>
+      </a>
+      <a class="icon-link" href="https://cnhaox.github.io" class="external-link" disabled>
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content has-text-centered">
+          <p>
+            The website template is borrowed from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> and <a href="https://dorverbin.github.io/refnerf/">Ref-NeRF</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
