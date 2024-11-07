@@ -1,12 +1,10 @@
 # NeRF-SR: High-Quality Neural Radiance Fields using Supersampling
 
-This is the official implementation of our ACM MM 2022 paper `NeRF-SR: High-Quality Neural Radiance Fields using Supersampling`. Pull requests and issues are welcome.
+This is the official implementation of our KSC 2024 paper `Codebook-NeRF: Improving NeRF resolution based on codebook`. Pull requests and issues are welcome.
 
-### [Project Page](https://cwchenwang.github.io/NeRF-SR) | [Video](https://youtu.be/c3Yx2nGvi8o) | [Paper](https://arxiv.org/abs/2112.01759)
+### [Project Page](https://drawingprocess.github.io/Codebook-NeRF) | [Video](https://youtu.be/c3Yx2nGvi8o) | [Paper](https://arxiv.org/abs/2112.01759)
 
-Abstract: *We present NeRF-SR, a solution for high-resolution (HR) novel view synthesis with mostly low-resolution (LR) inputs. Our method is built upon Neural Radiance Fields (NeRF) that predicts per-point density and color with a multi-layer perceptron. While producing images at arbitrary scales, NeRF struggles with resolutions that go beyond observed images. Our key insight is that NeRF benefits from 3D consistency, which means an observed pixel absorbs information from nearby views. We first exploit it by a supersampling strategy that shoots multiple rays at each image pixel, which further enforces multi-view constraint at a sub-pixel level. Then, we show that NeRF-SR can further boost the performance of supersampling by a refinement network that leverages the estimated depth at hand to hallucinate details from related patches on an HR reference image. Experiment results demonstrate that NeRF-SR generates high-quality results for novel view synthesis at HR on both synthetic and real-world datasets.*
-
-**Note: There is an error in the paper, for LLFF dataset training, the input resolution is 252x189, but the paper said it's 504x378.**
+Abstract: *In this paper, we propose a new NeRF[1] method that can restore high-resolution details of low-resolution images without reference images. To this end, while maintaining the Super Resolution process of NeRF-SR[2], the codebook structure of VQ-VAE[3] is introduced to learn the patterns of high-resolution images and improve the definition technique. The number of embedding vectors in the codebook was increased to learn more high-resolution information, and it is trained to imitate high-resolution latent characteristics without reference images through Imaging Inference. As a result of the experiment, the proposed model maintained the PSNR performance of NeRF-SR[2], and succeeded in generating clear and detail-rich images.*
 
 ## Requirements
 The codebase is tested on 
