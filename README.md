@@ -1,4 +1,4 @@
-# NeRF-SR: High-Quality Neural Radiance Fields using Supersampling
+# Codebook-NeRF: Improving NeRF resolution based on codebook
 
 This is the official implementation of our KSC 2024 paper `Codebook-NeRF: Improving NeRF resolution based on codebook`. Pull requests and issues are welcome.
 
