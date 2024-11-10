@@ -28,7 +28,7 @@ However, our method is compatible to any dataset than can be trained on NeRF to 
 ## Render the pretrained model
 We provide pretrained models in [Google Drive](https://drive.google.com/drive/folders/1uLx2bbKzyJJMw3Nr3gOEo45acfpF0TUd?usp=sharing).
 
-For supersampling, first download the pretrained models and put them under the `checkpoints/nerf-sr/${name}` directory, then run:
+For supersampling, first download the pretrained models and put them under the `checkpoints/codebook-nerf/${name}` directory, then run:
 ```bash
 bash scripts/test_llff_downX.sh
 ```
@@ -43,7 +43,7 @@ For refinement, run:
 bash scripts/test_llff_refine.sh
 ```
 
-## Train a new NeRF-SR model
+## Train a new Codebook-NeRF model
 Please check the configuration in the scripts. You can always modify it to your desired model config (especially the dataset path and input/output resolutions).
 ### Supersampling
 ```bash
@@ -87,7 +87,7 @@ For vanilla-NeRF, just test the trained NeRF under high resolutions using `bash 
 ## Citation
 If you consider our paper or code useful, please cite our paper:
 ```
-@inproceedings{lee2024nerf,
+@inproceedings{lee2024codebooknerf,
   title={Codebook-NeRF : Improving NeRF resolution based on codebook},
   author={KangHyun Lee, SungJun Choi, Jung UK Kim},
   booktitle={KSC},
