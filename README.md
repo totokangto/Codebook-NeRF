@@ -2,7 +2,7 @@
 
 This is the official implementation of our KSC 2024 paper `Codebook-NeRF: Improving NeRF resolution based on codebook`. Pull requests and issues are welcome.
 
-### [Project Page](https://drawingprocess.github.io/Codebook-NeRF) | [Video](https://youtu.be/c3Yx2nGvi8o) | [Paper](https://arxiv.org/abs/2112.01759)
+### [Project Page](https://drawingprocess.github.io/Codebook-NeRF) | [Paper](https://arxiv.org/abs/2112.01759)
 
 Abstract: *In this paper, we propose a new NeRF[1] method that can restore high-resolution details of low-resolution images without reference images. To this end, while maintaining the Super Resolution process of NeRF-SR[2], the codebook structure of VQ-VAE[3] is introduced to learn the patterns of high-resolution images and improve the definition technique. The number of embedding vectors in the codebook was increased to learn more high-resolution information, and it is trained to imitate high-resolution latent characteristics without reference images through Imaging Inference. As a result of the experiment, the proposed model maintained the PSNR performance of NeRF-SR[2], and succeeded in generating clear and detail-rich images.*
 
@@ -18,9 +18,10 @@ pip install -r requirements.txt
 ```
 
 ## Dataset
-In our paper, we use the same dataset as in NeRF:
-- [Blender](https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1)
+In our paper, we use the same dataset as in NeRF.
+but Blender is still possible:
 - [LLFF](https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1)
+- [Blender](https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1)
 
 However, our method is compatible to any dataset than can be trained on NeRF to perform super-resolution. Feel free to try out.
 
@@ -48,7 +49,7 @@ Please check the configuration in the scripts. You can always modify it to your 
 ```bash
 bash scripts/train_llff_downX.sh
 ```
-to train a 504x378 NeRF with 252x179 inputs.
+to train a 504x378 NeRF inputs.
 or
 ```bash
 bash scripts/train_blender_downX.sh
@@ -61,7 +62,8 @@ python warp.py
 ```
 to create `*.loc` files. An example of `*.loc` files can be found in the provided `fern` checkpoints (in the `30_val_vis` folder), which can be used directly for refinement.
 
-After that, you can train the refinement model:
+After that, you can train the refinement model.
+It is needed only for training with LLFF dataset:
 ```bash
 bash scripts/train_llff_refine.sh
 ```
@@ -85,14 +87,10 @@ For vanilla-NeRF, just test the trained NeRF under high resolutions using `bash 
 ## Citation
 If you consider our paper or code useful, please cite our paper:
 ```
-@inproceedings{wang2022nerf,
-  title={NeRF-SR: High-Quality Neural Radiance Fields using Supersampling},
-  author={Wang, Chen and Wu, Xian and Guo, Yuan-Chen and Zhang, Song-Hai and Tai, Yu-Wing and Hu, Shi-Min},
-  booktitle={Proceedings of the 30th ACM International Conference on Multimedia},
-  pages={6445--6454},
-  year={2022}
+@inproceedings{lee2024nerf,
+  title={Codebook-NeRF : Improving NeRF resolution based on codebook},
+  author={KangHyun Lee, SungJun Choi, Jung UK Kim},
+  booktitle={KSC},
+  year={2024}
 }
 ```
-
-## Credit
-Our code borrows from [nerf_pl](https://github.com/kwea123/nerf_pl) and [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix).
