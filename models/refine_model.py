@@ -87,10 +87,7 @@ class RefineModel(BaseModel):
             self.train_loss_names.append('l1')
         if self.opt.refine_with_grad:
             self.train_loss_names.append('grad')
-        
-        #self.val_loss_names = ['tot']
-        
-        # armsgrad를 True로 할까 말까
+
         if self.isTrain:
             self.optimizer = torch.optim.Adam(self.netRefine.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizers = [self.optimizer]
@@ -102,8 +99,8 @@ class RefineModel(BaseModel):
                 self.optimizers.append(self.optimizer_D)
     
     def forward(self):
-        # num_ref_patches가 8일 때 그 중 하나의 패치만 선택
-        selected_patch_idx = 0  # 0부터 7까지 선택 가능, 여기서는 첫 번째 패치를 선택
+        # choose a patch among 8 patches
+        selected_patch_idx = 0  
         self.data_ref_patch = self.data_ref_patches[:, selected_patch_idx * 3:(selected_patch_idx + 1) * 3, :, :]
 
         self.pred, self.cb_hr_patch, self.loss_hr, self.loss_lr = self.netRefine(self.data_sr_patch, self.data_ref_patch)
